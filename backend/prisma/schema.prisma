@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+datasource db {
+  provider = "postgresql"
+}
+model User {
+ id        String   @id @default(uuid())
+ email     String   @unique
+ password  String
+ name      String?
+ createdAt DateTime @default(now())
+
+ cart   Cart?
+ orders Order[]
+}
+
+model Product {
+ id          String   @id @default(uuid())
+ name        String
+ description String
+ price       Float
+ image       String
+ category    String
+ createdAt   DateTime @default(now())
+}
+
+model Cart {
+ id     String     @id @default(uuid())
+ userId String     @unique
+ user   User       @relation(fields: [userId], references: [id])
+ items  CartItem[]
+}
+
+model CartItem {
+ id        String @id @default(uuid())
+ cartId    String
+ productId String
+ quantity  Int
+
+ cart Cart @relation(fields: [cartId], references: [id])
+}
+
+model Order {
+ id        String   @id @default(uuid())
+ userId    String
+ total     Float
+ createdAt DateTime @default(now())
+
+ user  User        @relation(fields: [userId], references: [id])
+ items OrderItem[]
+}
+
+model OrderItem {
+ id        String @id @default(uuid())
+ orderId   String
+ productId String
+ quantity  Int
+ price     Float
+
+ order Order @relation(fields: [orderId], references: [id])
+}
