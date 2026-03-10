@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 
 import { generateToken } from "../utils/jwt"
-import { loginUser, registerUser } from "./suthService"
+import { loginUser, registerUser } from "./authService"
 
 export const register = async (
   req: Request,

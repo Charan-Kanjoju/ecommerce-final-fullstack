@@ -1,5 +1,5 @@
 
-import { prisma } from "../../lib/prisma"
+import { prisma } from "../lib/prisma"
 import { hashPassword, comparePassword } from "../utils/hash"
 
 export const registerUser = async (
