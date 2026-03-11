@@ -1,14 +1,16 @@
 import Layout from "../components/Layout";
 import { useParams } from "react-router-dom";
 import { useState } from "react";
+import { useCartStore } from "../store/useCartStore";
 
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 
 export default function ProductDetails() {
   const { id } = useParams();
 
   const [quantity, setQuantity] = useState(1);
+  const addToCart = useCartStore((state) => state.addToCart);
 
   const { data, isLoading } = useQuery({
     queryKey: ["product", id],
@@ -18,25 +20,7 @@ export default function ProductDetails() {
     },
   });
 
-  const addToCart = useMutation({
-    mutationFn: async () => {
-      const res = await api.post("/cart/add", {
-        productId: product.id,
-        quantity,
-      });
 
-      return res.data;
-    },
-
-    onSuccess: () => {
-      alert("Added to cart");
-    },
-
-    onError: (error) => {
-      console.error(error);
-      alert("Failed to add to cart");
-    },
-  });
 
   if (isLoading) return <p>Loading...</p>;
 
@@ -76,10 +60,13 @@ export default function ProductDetails() {
 
           <button
             className="bg-black text-white px-6 py-3 rounded-lg"
-            onClick={() => addToCart.mutate()}
-            disabled={addToCart.isPending}
+            onClick={async () => {
+              await addToCart(product.id, quantity);
+
+              alert("Added to cart");
+            }}
           >
-            {addToCart.isPending ? "Adding..." : "Add To Cart"}
+            Add To Cart
           </button>
         </div>
       </div>
