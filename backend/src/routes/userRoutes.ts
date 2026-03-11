@@ -1,19 +1,13 @@
-import express from "express"
-import { authMiddleware } from "../middleware/authMiddleware"
+import express from "express";
+import { authMiddleware } from "../middleware/authMiddleware";
 
-const router = express.Router()
+const router = express.Router();
 
-router.get(
-  "/profile",
-  authMiddleware,
-  (req: any, res) => {
+router.get("/profile", authMiddleware, (req: any, res) => {
+  res.json({
+    message: "Protected route accessed",
+    userId: req.userId,
+  });
+});
 
-    res.json({
-      message: "Protected route accessed",
-      userId: req.userId
-    })
-
-  }
-)
-
-export default router
+export default router;
