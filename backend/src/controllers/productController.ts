@@ -24,7 +24,7 @@ export const getProducts = async (
       search as string,
       category as string,
       Number(page) || 1,
-      Number(limit) || 10
+      Number(limit) || 100
     )
 
     res.json(products)
