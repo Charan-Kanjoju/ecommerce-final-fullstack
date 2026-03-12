@@ -1,5 +1,4 @@
 import { createBrowserRouter } from "react-router-dom";
-
 import Products from "../pages/Products";
 import ProductDetails from "../pages/ProductDetails";
 import Cart from "../pages/Cart";
@@ -9,6 +8,7 @@ import Orders from "../pages/Orders";
 import Profile from "../pages/Profile";
 import Landing from "../pages/Landing";
 import Checkout from "../pages/Checkout";
+import OrderDetails from "../pages/OrderDetails";
 import ProtectedRoute from "../components/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -24,12 +24,19 @@ export const router = createBrowserRouter([
     path: "/products/:id",
     element: <ProductDetails />,
   },
-
   {
     path: "/cart",
     element: (
       <ProtectedRoute>
         <Cart />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/checkout",
+    element: (
+      <ProtectedRoute>
+        <Checkout />
       </ProtectedRoute>
     ),
   },
@@ -42,6 +49,14 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    path: "/orders/:id",
+    element: (
+      <ProtectedRoute>
+        <OrderDetails />
+      </ProtectedRoute>
+    ),
+  },
+  {
     path: "/profile",
     element: (
       <ProtectedRoute>
@@ -50,23 +65,11 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: "/checkout",
-    element: <Checkout />,
-  },
-  {
-    path: "/orders",
-    element: <Orders />,
-  },
-  {
     path: "/login",
     element: <Login />,
   },
   {
     path: "/register",
     element: <Register />,
-  },
-  {
-    path: "/profile",
-    element: <Profile />
   },
 ]);

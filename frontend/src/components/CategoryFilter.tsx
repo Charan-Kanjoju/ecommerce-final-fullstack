@@ -1,17 +1,11 @@
+import { DB_CATEGORY_SLUGS, formatCategoryLabel } from "../utils/categories";
+
 type Props = {
   category: string;
   setCategory: (value: string) => void;
 };
 
-const categories = [
-  "all",
-  "smartphones",
-  "laptops",
-  "fragrances",
-  "skincare",
-  "groceries",
-  "home-decoration",
-];
+const categories = ["All", ...DB_CATEGORY_SLUGS];
 
 export default function CategoryFilter({ category, setCategory }: Props) {
   return (
@@ -24,7 +18,7 @@ export default function CategoryFilter({ category, setCategory }: Props) {
 ${category === cat ? "bg-black text-white" : ""}
 `}
         >
-          {cat}
+          {cat === "All" ? "All" : formatCategoryLabel(cat)}
         </button>
       ))}
     </div>

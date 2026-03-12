@@ -1,111 +1,162 @@
-import Layout from "../components/Layout";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useState } from "react";
-import { useCartStore } from "../store/useCartStore";
-
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/client";
+import Layout from "../components/Layout";
+import { useCartStore } from "../store/useCartStore";
+import { fetchProductById, fetchProducts } from "../services/product.service";
+
+const SIZES = ["S", "M", "L", "XL"];
+const COLORS = ["Black", "White", "Stone"];
 
 export default function ProductDetails() {
-  const { id } = useParams();
+  const { id = "" } = useParams();
+  const addToCart = useCartStore((state) => state.addToCart);
+  const setDrawerOpen = useCartStore((state) => state.setDrawerOpen);
 
   const [quantity, setQuantity] = useState(1);
-  const addToCart = useCartStore((state) => state.addToCart);
+  const [size, setSize] = useState("M");
+  const [color, setColor] = useState("Black");
+  const [isAdding, setIsAdding] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data: product, isLoading } = useQuery({
     queryKey: ["product", id],
-    queryFn: async () => {
-      const res = await api.get(`/products/${id}`);
-      return res.data;
-    },
+    queryFn: () => fetchProductById(id),
+    enabled: Boolean(id),
   });
 
-  if (isLoading) {
+  const { data: relatedData } = useQuery({
+    queryKey: ["related-products", product?.category],
+    queryFn: () => fetchProducts({ page: 1, category: product?.category, sort: "newest" }),
+    enabled: Boolean(product?.category),
+  });
+
+  const relatedProducts = useMemo(
+    () => (relatedData?.products || []).filter((item) => item.id !== id).slice(0, 4),
+    [relatedData, id],
+  );
+
+  if (isLoading || !product) {
     return (
       <Layout>
-        <div className="flex justify-center items-center h-[60vh]">
-          Loading product...
+        <div className="grid animate-pulse gap-8 md:grid-cols-2">
+          <div className="h-[520px] rounded-3xl bg-zinc-200" />
+          <div className="space-y-4">
+            <div className="h-8 w-2/3 rounded bg-zinc-200" />
+            <div className="h-6 w-1/3 rounded bg-zinc-200" />
+            <div className="h-24 rounded bg-zinc-200" />
+          </div>
         </div>
       </Layout>
     );
   }
 
-  const product = data;
-
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12">
-        {/* PRODUCT IMAGE */}
-        <div className="bg-white border rounded-xl p-6 shadow-sm">
-          <img src={product.image} className="w-full object-cover rounded-lg" />
+      <div className="grid gap-10 lg:grid-cols-[1.25fr_1fr]">
+        <div className="overflow-hidden rounded-3xl bg-zinc-100">
+          <img
+            src={product.image}
+            alt={product.name}
+            className="h-full max-h-[640px] w-full cursor-zoom-in object-cover transition duration-500 hover:scale-110"
+          />
         </div>
 
-        {/* PRODUCT DETAILS */}
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
+        <section className="space-y-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{product.category}</p>
+          <h1 className="text-4xl font-semibold tracking-tight text-zinc-900">{product.name}</h1>
+          <p className="text-2xl font-semibold text-zinc-900">${product.price.toFixed(2)}</p>
+          <p className="leading-relaxed text-zinc-600">{product.description}</p>
 
-            <p className="text-gray-500 text-sm">
-              Category: {product.category}
-            </p>
-          </div>
-
-          {/* PRICE */}
-          <div className="text-3xl font-semibold text-black">
-            ${product.price}
-          </div>
-
-          {/* STOCK */}
-          <div>
-            {product.stock > 0 ? (
-              <span className="bg-green-100 text-green-700 text-sm px-3 py-1 rounded-full">
-                In Stock ({product.stock})
-              </span>
-            ) : (
-              <span className="bg-red-100 text-red-700 text-sm px-3 py-1 rounded-full">
-                Out of Stock
-              </span>
-            )}
-          </div>
-
-          {/* DESCRIPTION */}
-          <p className="text-gray-600 leading-relaxed">{product.description}</p>
-
-          {/* QUANTITY SELECTOR */}
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500">Quantity</span>
-
-            <div className="flex items-center border rounded-lg overflow-hidden">
-              <button
-                className="px-4 py-2 hover:bg-gray-100"
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              >
-                -
-              </button>
-
-              <span className="px-4">{quantity}</span>
-
-              <button
-                className="px-4 py-2 hover:bg-gray-100"
-                onClick={() => setQuantity((q) => q + 1)}
-              >
-                +
-              </button>
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">Size</p>
+            <div className="flex flex-wrap gap-2">
+              {SIZES.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setSize(option)}
+                  className={`rounded-full border px-4 py-2 text-sm transition ${
+                    size === option ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* ADD TO CART BUTTON */}
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">Color</p>
+            <div className="flex flex-wrap gap-2">
+              {COLORS.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setColor(option)}
+                  className={`rounded-full border px-4 py-2 text-sm transition ${
+                    color === option ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              className="rounded-full border border-zinc-300 px-3 py-1.5"
+              onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+            >
+              -
+            </button>
+            <span className="w-6 text-center text-sm">{quantity}</span>
+            <button className="rounded-full border border-zinc-300 px-3 py-1.5" onClick={() => setQuantity((prev) => prev + 1)}>
+              +
+            </button>
+          </div>
+
           <button
-            className="bg-black text-white px-8 py-3 rounded-lg hover:bg-gray-800 transition font-medium"
+            disabled={isAdding || product.stock <= 0}
             onClick={async () => {
-              await addToCart(product.id, quantity);
-              alert("Added to cart 🛒");
+              setIsAdding(true);
+              try {
+                await addToCart(product.id, quantity);
+                setDrawerOpen(true);
+              } finally {
+                setIsAdding(false);
+              }
             }}
+            className="w-full rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition hover:scale-[1.01] hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Add To Cart
+            {isAdding ? "Adding..." : "Add To Cart"}
           </button>
-        </div>
+
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+            <p className="text-sm font-medium text-zinc-900">Reviews</p>
+            <p className="mt-1 text-sm text-zinc-600">4.8/5 average from 129 customers</p>
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-zinc-600">
+              <li>Excellent fit and lightweight feel.</li>
+              <li>Premium material quality and finish.</li>
+              <li>Comfortable for everyday wear.</li>
+            </ul>
+          </div>
+        </section>
       </div>
+
+      <section className="mt-14">
+        <h2 className="mb-6 text-2xl font-semibold text-zinc-900">Related Products</h2>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {relatedProducts.map((item) => (
+            <Link key={item.id} to={`/products/${item.id}`} className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+              <img src={item.image} alt={item.name} className="h-52 w-full object-cover transition duration-500 hover:scale-105" />
+              <div className="p-4">
+                <p className="line-clamp-1 text-sm font-medium text-zinc-900">{item.name}</p>
+                <p className="mt-1 text-sm text-zinc-500">${item.price.toFixed(2)}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
     </Layout>
   );
 }

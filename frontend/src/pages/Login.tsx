@@ -1,58 +1,60 @@
-import Layout from "../components/Layout";
 import { useState } from "react";
-import { loginUser } from "../api/auth";
 import { useNavigate } from "react-router-dom";
+import Layout from "../components/Layout";
+import { loginUser } from "../api/auth";
 import { useAuthStore } from "../store/useAuthStore";
 
 export default function Login() {
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
+  const setAuth = useAuthStore((state) => state.setAuth);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
-      const res = await loginUser({
-        email,
-        password,
-      });
-
-      login(res.token);
-
-      alert("Login successful");
-
+      const response = await loginUser({ email, password });
+      setAuth({ accessToken: response.accessToken, user: response.user });
       navigate("/products");
-    } catch (error) {
-      alert("Login failed");
+    } catch {
+      setError("Invalid email or password.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <Layout>
-      <div className="max-w-md mx-auto mt-20">
-        <h1 className="text-3xl font-bold mb-6">Login</h1>
+      <div className="mx-auto mt-10 max-w-md rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
+        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Welcome back</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Sign in</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <input
             type="email"
             placeholder="Email"
-            className="w-full border p-3 rounded"
+            className="w-full rounded-xl border border-zinc-200 px-4 py-3"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(event) => setEmail(event.target.value)}
           />
-
           <input
             type="password"
             placeholder="Password"
-            className="w-full border p-3 rounded"
+            className="w-full rounded-xl border border-zinc-200 px-4 py-3"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(event) => setPassword(event.target.value)}
           />
-
-          <button className="w-full bg-black text-white p-3 rounded">
-            Login
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button
+            disabled={loading}
+            className="w-full rounded-full bg-zinc-900 py-3 text-sm font-medium text-white disabled:opacity-60"
+          >
+            {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
       </div>

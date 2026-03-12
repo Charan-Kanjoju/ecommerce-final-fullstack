@@ -1,30 +1,58 @@
 import { create } from "zustand";
 
+type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 interface AuthState {
-  token: string | null;
+  accessToken: string | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (token: string) => void;
-  logout: () => void;
+  setAuth: (payload: { accessToken: string; user: AuthUser }) => void;
+  setAccessToken: (accessToken: string | null) => void;
+  clearAuth: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: localStorage.getItem("token"),
-  isAuthenticated: !!localStorage.getItem("token"),
+  accessToken: localStorage.getItem("accessToken"),
+  user: localStorage.getItem("authUser")
+    ? JSON.parse(localStorage.getItem("authUser") as string)
+    : null,
+  isAuthenticated: !!localStorage.getItem("accessToken"),
 
-  login: (token) => {
-    localStorage.setItem("token", token);
+  setAuth: ({ accessToken, user }) => {
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("authUser", JSON.stringify(user));
 
     set({
-      token,
+      accessToken,
+      user,
       isAuthenticated: true,
     });
   },
 
-  logout: () => {
-    localStorage.removeItem("token");
+  setAccessToken: (accessToken) => {
+    if (accessToken) {
+      localStorage.setItem("accessToken", accessToken);
+    } else {
+      localStorage.removeItem("accessToken");
+    }
 
     set({
-      token: null,
+      accessToken,
+      isAuthenticated: !!accessToken,
+    });
+  },
+
+  clearAuth: () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("authUser");
+
+    set({
+      accessToken: null,
+      user: null,
       isAuthenticated: false,
     });
   },

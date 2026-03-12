@@ -1,50 +1,65 @@
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import ProductCard from "./ProductCard";
-import { api } from "../api/client";
+import { fetchProducts } from "../services/product.service";
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "./ui/carousel";
 
 export default function FeaturedProducts() {
+  const [api, setApi] = useState<CarouselApi>();
+
   const { data, isLoading } = useQuery({
-    queryKey: ["products"],
-    queryFn: async () => {
-      const res = await api.get("/products");
-      return res.data;
-    },
+    queryKey: ["featured-products"],
+    queryFn: () => fetchProducts({ page: 1, sort: "newest" }),
+    staleTime: 60 * 1000,
   });
+
+  useEffect(() => {
+    if (!api) return;
+
+    const interval = window.setInterval(() => {
+      if (api.canScrollNext()) {
+        api.scrollNext();
+      } else {
+        api.scrollTo(0);
+      }
+    }, 2800);
+
+    return () => window.clearInterval(interval);
+  }, [api]);
 
   if (isLoading) {
     return (
-      <section className="py-20">
-        <div className="text-center">Loading products...</div>
+      <section className="py-16">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <div key={idx} className="h-80 animate-pulse rounded-2xl bg-zinc-200" />
+          ))}
+        </div>
       </section>
     );
   }
 
+  const products = (data?.products || []).filter((product) => product.category !== "kitchen-accessories").slice(0, 8);
+
   return (
-    <section className="py-20 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="flex items-center justify-between mb-10">
-          <h2 className="text-3xl font-bold">Featured Products</h2>
-
-          <a
-            href="/products"
-            className="text-sm font-medium text-gray-600 hover:text-black"
-          >
-            View All →
-          </a>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {data?.slice(0, 8).map((product: any) => (
-            <ProductCard
-              key={product.id}
-              id={product.id}
-              name={product.name}
-              price={product.price}
-              image={product.image}
-            />
-          ))}
-        </div>
+    <section className="py-16">
+      <div className="mb-8 flex items-center justify-between">
+        <h2 className="text-3xl font-semibold tracking-tight">Featured Products</h2>
+        <Link to="/products" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
+          View all
+        </Link>
       </div>
+
+      <Carousel setApi={setApi} opts={{ align: "start", loop: true }} className="w-full">
+        <CarouselContent className="-ml-4">
+          {products.map((product) => (
+            <CarouselItem key={product.id} className="pl-4 md:basis-1/2 lg:basis-1/4">
+              <ProductCard id={product.id} name={product.name} price={product.price} image={product.image} />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
     </section>
   );
 }
