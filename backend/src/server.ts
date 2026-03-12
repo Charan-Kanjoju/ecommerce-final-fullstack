@@ -11,30 +11,26 @@ dotenv.config();
 
 const app = express();
 
-const envOrigins = (process.env.CLIENT_URL || "")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-
-const allowedOrigins = new Set<string>([
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "https://ecommerce-final-fullstack.vercel.app",
-  ...envOrigins,
-]);
+const allowedOrigins = ["https://ecommerce-final-fullstack.vercel.app"];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.has(origin)) {
+      if (
+        !origin ||
+        origin.startsWith("http://localhost") ||
+        origin.startsWith("http://127.0.0.1") ||
+        allowedOrigins.includes(origin)
+      ) {
         callback(null, true);
-        return;
+      } else {
+        callback(new Error("Not allowed by CORS"));
       }
-      callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
   }),
 );
+
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
@@ -44,7 +40,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 
 app.get("/", (req, res) => {
-  res.send("Ecommerce API Running");
+  res.send("Ecommerce API Running Successfully");
 });
 
 const PORT = process.env.PORT || 5000;
