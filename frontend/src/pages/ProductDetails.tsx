@@ -20,50 +20,86 @@ export default function ProductDetails() {
     },
   });
 
-
-
-  if (isLoading) return <p>Loading...</p>;
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center h-[60vh]">
+          Loading product...
+        </div>
+      </Layout>
+    );
+  }
 
   const product = data;
 
   return (
     <Layout>
-      <div className="grid md:grid-cols-2 gap-10">
-        <img src={product.image} className="w-full rounded-xl" />
+      <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12">
+        {/* PRODUCT IMAGE */}
+        <div className="bg-white border rounded-xl p-6 shadow-sm">
+          <img src={product.image} className="w-full object-cover rounded-lg" />
+        </div>
 
-        <div>
-          <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
+        {/* PRODUCT DETAILS */}
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
 
-          <p className="text-gray-600 mb-4">{product.description}</p>
-
-          <p className="text-2xl font-semibold mb-4">${product.price}</p>
-
-          <p className="text-sm text-gray-500 mb-6">Stock: {product.stock}</p>
-
-          <div className="flex items-center gap-4 mb-6">
-            <button
-              className="border px-3 py-1"
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-            >
-              -
-            </button>
-
-            <span>{quantity}</span>
-
-            <button
-              className="border px-3 py-1"
-              onClick={() => setQuantity((q) => q + 1)}
-            >
-              +
-            </button>
+            <p className="text-gray-500 text-sm">
+              Category: {product.category}
+            </p>
           </div>
 
+          {/* PRICE */}
+          <div className="text-3xl font-semibold text-black">
+            ${product.price}
+          </div>
+
+          {/* STOCK */}
+          <div>
+            {product.stock > 0 ? (
+              <span className="bg-green-100 text-green-700 text-sm px-3 py-1 rounded-full">
+                In Stock ({product.stock})
+              </span>
+            ) : (
+              <span className="bg-red-100 text-red-700 text-sm px-3 py-1 rounded-full">
+                Out of Stock
+              </span>
+            )}
+          </div>
+
+          {/* DESCRIPTION */}
+          <p className="text-gray-600 leading-relaxed">{product.description}</p>
+
+          {/* QUANTITY SELECTOR */}
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-500">Quantity</span>
+
+            <div className="flex items-center border rounded-lg overflow-hidden">
+              <button
+                className="px-4 py-2 hover:bg-gray-100"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              >
+                -
+              </button>
+
+              <span className="px-4">{quantity}</span>
+
+              <button
+                className="px-4 py-2 hover:bg-gray-100"
+                onClick={() => setQuantity((q) => q + 1)}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* ADD TO CART BUTTON */}
           <button
-            className="bg-black text-white px-6 py-3 rounded-lg"
+            className="bg-black text-white px-8 py-3 rounded-lg hover:bg-gray-800 transition font-medium"
             onClick={async () => {
               await addToCart(product.id, quantity);
-
-              alert("Added to cart");
+              alert("Added to cart 🛒");
             }}
           >
             Add To Cart

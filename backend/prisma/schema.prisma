@@ -25,6 +25,7 @@ model Product {
  category    String
  stock       Int
  createdAt   DateTime @default(now())
+ orderItems  OrderItem[]
 }
 
 model Cart {
@@ -42,12 +43,26 @@ model CartItem {
 
  cart Cart @relation(fields: [cartId], references: [id])
 }
-
 model Order {
- id        String   @id @default(uuid())
- userId    String
- total     Float
- createdAt DateTime @default(now())
+ id            String   @id @default(uuid())
+ userId        String
+ total         Float
+
+ fullName      String
+ addressLine1  String
+ addressLine2  String?
+ city          String
+ state         String
+ postalCode    String
+ country       String
+ phone         String
+
+ 
+ status        String   @default("PENDING")
+ paymentMethod String
+ paymentStatus String   @default("UNPAID")
+
+ createdAt     DateTime @default(now())
 
  user  User        @relation(fields: [userId], references: [id])
  items OrderItem[]
@@ -60,5 +75,6 @@ model OrderItem {
  quantity  Int
  price     Float
 
- order Order @relation(fields: [orderId], references: [id])
+ order   Order   @relation(fields: [orderId], references: [id])
+ product Product @relation(fields: [productId], references: [id])
 }
