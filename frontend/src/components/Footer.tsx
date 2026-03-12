@@ -1,10 +1,10 @@
 export default function Footer() {
   return (
-    <footer className="bg-black text-white mt-20">
+    <footer className="mt-20 bg-zinc-950 text-white">
       <div className="max-w-7xl mx-auto px-6 py-10 grid md:grid-cols-3 gap-10">
         <div>
-          <h2 className="text-xl font-bold mb-3">ShopSphere</h2>
-          <p className="text-gray-400">Modern ecommerce platform</p>
+          <h2 className="text-xl font-bold mb-3 tracking-wide">AURORA</h2>
+          <p className="text-gray-400">Premium commerce experience.</p>
         </div>
 
         <div>

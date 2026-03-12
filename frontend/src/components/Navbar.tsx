@@ -1,119 +1,99 @@
-import { Link } from "react-router-dom";
-
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { LogIn, LogOut, Package, Search, ShoppingBag, User } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useCartStore } from "../store/useCartStore";
-
-import {
-  ShoppingCart,
-  Package,
-  User,
-  LogOut,
-  LogIn,
-  Home,
-  Store,
-} from "lucide-react";
+import { logoutUser } from "../api/auth";
 
 export default function Navbar() {
-  const { isAuthenticated, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const { isAuthenticated, clearAuth } = useAuthStore();
   const cartCount = useCartStore((state) => state.cartCount || 0);
+  const setDrawerOpen = useCartStore((state) => state.setDrawerOpen);
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } finally {
+      clearAuth();
+      navigate("/");
+    }
+  };
 
   return (
-    <nav className="border-b bg-white sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-       
-        <Link
-          to="/"
-          className="text-2xl font-bold flex items-center gap-2 text-gray-800"
-        >
-          <Store size={24} />
-          ShopSphere
+    <nav className="sticky top-0 z-50 border-b border-zinc-200/80 bg-white/90 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 md:px-6">
+        <Link to="/" className="text-2xl font-semibold tracking-tight text-zinc-900">
+          AURORA
         </Link>
 
+        <div className="hidden items-center gap-7 text-sm font-medium text-zinc-700 md:flex">
+          <NavLink to="/products" className="transition hover:text-zinc-900">
+            New Arrivals
+          </NavLink>
+          {isAuthenticated && (
+            <NavLink to="/orders" className="transition hover:text-zinc-900">
+              Orders
+            </NavLink>
+          )}
+          {isAuthenticated && (
+            <NavLink to="/profile" className="transition hover:text-zinc-900">
+              Profile
+            </NavLink>
+          )}
+        </div>
 
-        <div className="flex items-center gap-6 text-gray-600 font-medium">
-         <Link
-            to="/"
-            className="flex items-center gap-1 hover:text-black transition"
-          >
-            <Home size={18} />
-            Home
+        <div className="flex items-center gap-2">
+          <Link to="/products" className="rounded-full p-2 text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900">
+            <Search size={18} />
           </Link>
 
-       
-          <Link
-            to="/products"
-            className="flex items-center gap-1 hover:text-black transition"
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="relative rounded-full p-2 text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900"
+            aria-label="Open cart drawer"
           >
-            <Package size={18} />
-            Products
-          </Link>
-
-      
-          <Link
-            to="/cart"
-            className="relative flex items-center gap-1 hover:text-black transition"
-          >
-            <ShoppingCart size={18} />
- 
+            <ShoppingBag size={18} />
             {cartCount > 0 && (
-              <span className="absolute -top-2 -right-3 bg-black text-white text-xs px-2 py-0.5 rounded-full">
+              <span className="absolute -right-1 -top-1 rounded-full bg-zinc-900 px-1.5 py-0.5 text-[10px] font-medium text-white">
                 {cartCount}
               </span>
             )}
-          </Link>
+          </button>
 
-          
-          {isAuthenticated && (
-            <Link
-              to="/orders"
-              className="flex items-center gap-1 hover:text-black transition"
-            >
-              <Package size={18} />
-              Orders
-            </Link>
-          )}
-
-          
-          {isAuthenticated && (
-            <Link
-              to="/profile"
-              className="flex items-center gap-1 hover:text-black transition"
-            >
-              <User size={18} />
-            </Link>
-          )}
-
-   
           {isAuthenticated ? (
-            <button
-              onClick={() => {
-                logout();
-                window.location.href = "/";
-              }}
-              className="flex items-center gap-1 text-red-500 hover:text-red-600 transition"
-            >
-              <LogOut size={18} />
-              Logout
-            </button>
+            <>
+              <Link to="/profile" className="rounded-full p-2 text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900">
+                <User size={18} />
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="rounded-full p-2 text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900"
+                aria-label="Logout"
+              >
+                <LogOut size={18} />
+              </button>
+            </>
           ) : (
             <>
-              <Link
-                to="/login"
-                className="flex items-center gap-1 hover:text-black transition"
-              >
+              <Link to="/login" className="rounded-full p-2 text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900">
                 <LogIn size={18} />
-                Login
               </Link>
-
               <Link
                 to="/register"
-                className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
+                className="hidden rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-black md:inline-flex"
               >
-                Register
+                Join
               </Link>
             </>
           )}
         </div>
+      </div>
+
+      <div className="flex items-center justify-center gap-4 border-t border-zinc-100 px-4 py-2 text-xs font-medium text-zinc-500 md:hidden">
+        <NavLink to="/products" className="inline-flex items-center gap-1">
+          <Package size={14} />
+          Shop
+        </NavLink>
       </div>
     </nav>
   );

@@ -1,130 +1,119 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import Layout from "../components/Layout";
 import { useCartStore } from "../store/useCartStore";
-import { api } from "../api/client";
-import { useNavigate } from "react-router-dom";
+import { fetchProductsByIds } from "../services/product.service";
 
 export default function Cart() {
   const navigate = useNavigate();
-  const { items, fetchCart, removeFromCart } = useCartStore();
-  const [products, setProducts] = useState<any[]>([]);
+  const { items, updateCartItem, removeFromCart } = useCartStore();
 
-  useEffect(() => {
-    fetchCart();
+  const productIds = items.map((item) => item.productId);
 
-    const fetchProducts = async () => {
-      const res = await api.get("/products?page=1");
-      setProducts(res.data.products); // ✅ FIX
-    };
+  const { data: products } = useQuery({
+    queryKey: ["cart-page-products", productIds],
+    queryFn: () => fetchProductsByIds(productIds),
+    enabled: productIds.length > 0,
+  });
 
-    fetchProducts();
-  }, []);
+  const productMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    (products || []).forEach((product) => {
+      map[product.id] = product;
+    });
+    return map;
+  }, [products]);
 
-  const total =
-    items?.reduce((sum: number, item: any) => {
-      const product = products.find((p) => p.id === item.productId);
-      if (!product) return sum;
-      return sum + product.price * item.quantity;
-    }, 0) ?? 0;
-
-  if (!items || items?.length === 0) {
-    return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-          <h1 className="text-3xl font-bold mb-4">Your Cart is Empty</h1>
-          <p className="text-gray-500 mb-6">
-            Looks like you haven't added anything yet.
-          </p>
-
-          <button
-            onClick={() => navigate("/products")}
-            className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition"
-          >
-            Continue Shopping
-          </button>
-        </div>
-      </Layout>
-    );
-  }
+  const total = items.reduce((sum, item) => {
+    const product = productMap[item.productId];
+    if (!product) return sum;
+    return sum + product.price * item.quantity;
+  }, 0);
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8">
-        {/* CART ITEMS */}
-        <div className="md:col-span-2 space-y-6">
-          <h1 className="text-3xl font-bold mb-6">Shopping Cart</h1>
-
-          {items.map((item: any) => {
-            const product = products.find((p) => p.id === item.productId);
-            if (!product) return null;
-
-            return (
-              <div
-                key={item.id}
-                className="flex gap-6 border rounded-xl p-4 shadow-sm hover:shadow-md transition bg-white"
+      <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+        <section className="space-y-4">
+          <h1 className="text-3xl font-semibold tracking-tight">Your Cart</h1>
+          {items.length === 0 ? (
+            <div className="rounded-3xl border border-zinc-200 bg-white p-10 text-center">
+              <p className="text-zinc-600">Your cart is empty.</p>
+              <button
+                onClick={() => navigate("/products")}
+                className="mt-5 rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white"
               >
-                <img
-                  src={product.image}
-                  className="w-28 h-28 object-cover rounded-lg"
-                />
+                Shop products
+              </button>
+            </div>
+          ) : (
+            items.map((item) => {
+              const product = productMap[item.productId];
+              if (!product) return null;
 
-                <div className="flex-1 flex flex-col justify-between">
-                  <div>
-                    <h2 className="font-semibold text-lg">{product.name}</h2>
-
-                    <p className="text-gray-500 text-sm mt-1">
-                      ${product.price}
-                    </p>
-
-                    <p className="text-gray-400 text-sm mt-2">
-                      Quantity: {item.quantity}
-                    </p>
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-2xl border border-zinc-200 bg-white p-4 transition duration-300 hover:shadow-lg"
+                >
+                  <div className="flex gap-4">
+                    <img src={product.image} alt={product.name} className="h-24 w-24 rounded-xl object-cover" loading="lazy" />
+                    <div className="flex flex-1 flex-col justify-between">
+                      <div>
+                        <h2 className="font-medium text-zinc-900">{product.name}</h2>
+                        <p className="text-sm text-zinc-500">${product.price.toFixed(2)}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateCartItem(item.id, Math.max(1, item.quantity - 1))}
+                          className="rounded-full border border-zinc-300 px-2"
+                        >
+                          -
+                        </button>
+                        <span className="text-sm">{item.quantity}</span>
+                        <button
+                          onClick={() => updateCartItem(item.id, item.quantity + 1)}
+                          className="rounded-full border border-zinc-300 px-2"
+                        >
+                          +
+                        </button>
+                        <button onClick={() => removeFromCart(item.id)} className="ml-auto text-sm text-red-600">
+                          Remove
+                        </button>
+                      </div>
+                    </div>
                   </div>
-
-                  <button
-                    onClick={() => removeFromCart(item.id)}
-                    className="text-red-500 text-sm mt-3 hover:underline w-fit"
-                  >
-                    Remove
-                  </button>
                 </div>
+              );
+            })
+          )}
+        </section>
 
-                <div className="font-semibold text-lg">
-                  ${(product.price * item.quantity).toFixed(2)}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* ORDER SUMMARY */}
-        <div className="border rounded-xl p-6 h-fit shadow-sm bg-white sticky top-24">
-          <h2 className="text-xl font-bold mb-6">Order Summary</h2>
-
-          <div className="flex justify-between text-gray-600 mb-2">
-            <span>Subtotal</span>
-            <span>${total.toFixed(2)}</span>
+        <aside className="h-fit rounded-3xl border border-zinc-200 bg-white p-6 lg:sticky lg:top-24">
+          <h2 className="text-xl font-semibold">Summary</h2>
+          <div className="mt-5 space-y-2 text-sm text-zinc-600">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>${total.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Shipping</span>
+              <span>Free</span>
+            </div>
           </div>
-
-          <div className="flex justify-between text-gray-600 mb-2">
-            <span>Shipping</span>
-            <span>Free</span>
-          </div>
-
-          <div className="border-t my-4"></div>
-
-          <div className="flex justify-between text-lg font-semibold mb-6">
+          <div className="my-5 h-px bg-zinc-200" />
+          <div className="flex justify-between text-base font-semibold">
             <span>Total</span>
             <span>${total.toFixed(2)}</span>
           </div>
-
           <button
             onClick={() => navigate("/checkout")}
-            className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition font-medium"
+            disabled={items.length === 0}
+            className="mt-6 w-full rounded-full bg-zinc-900 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Proceed to Checkout
+            Continue to checkout
           </button>
-        </div>
+        </aside>
       </div>
     </Layout>
   );

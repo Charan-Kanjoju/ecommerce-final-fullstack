@@ -12,8 +12,9 @@ model User {
  name      String
  createdAt DateTime @default(now())
 
- cart   Cart?
- orders Order[]
+ cart          Cart?
+ orders        Order[]
+ refreshTokens RefreshToken[]
 }
 
 model Product {
@@ -77,4 +78,19 @@ model OrderItem {
 
  order   Order   @relation(fields: [orderId], references: [id])
  product Product @relation(fields: [productId], references: [id])
+}
+
+model RefreshToken {
+ id        String   @id @default(uuid())
+ userId    String
+ tokenHash String   @unique
+ expiresAt DateTime
+ revokedAt DateTime?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+
+ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+ @@index([userId])
+ @@index([expiresAt])
 }

@@ -63,7 +63,11 @@ export const getOrdersService = async (userId: string) => {
   return prisma.order.findMany({
     where: { userId },
     include: {
-      items: true,
+      items: {
+        include: {
+          product: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -78,7 +82,11 @@ export const getOrderByIdService = async (userId: string, orderId: string) => {
       userId,
     },
     include: {
-      items: true,
+      items: {
+        include: {
+          product: true,
+        },
+      },
     },
   });
 };

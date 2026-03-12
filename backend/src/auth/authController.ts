@@ -1,90 +1,108 @@
-import { Request, Response } from "express"
+import { Request, Response } from "express";
+import {
+  createSessionTokens,
+  loginUser,
+  registerUser,
+  revokeRefreshToken,
+  rotateRefreshToken,
+} from "./authService";
 
-import { generateToken } from "../utils/jwt"
-import { loginUser, registerUser } from "./authService"
+const REFRESH_COOKIE_NAME = "refreshToken";
 
-export const register = async (
-  req: Request,
-  res: Response
-) => {
+const parseCookies = (req: Request) => {
+  const raw = req.headers.cookie;
+  if (!raw) return {} as Record<string, string>;
+  return raw.split(";").reduce<Record<string, string>>((acc, part) => {
+    const [key, ...value] = part.trim().split("=");
+    acc[key] = decodeURIComponent(value.join("="));
+    return acc;
+  }, {});
+};
 
+const setRefreshCookie = (res: Response, refreshToken: string) => {
+  res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/api/auth",
+  });
+};
+
+const clearRefreshCookie = (res: Response) => {
+  res.clearCookie(REFRESH_COOKIE_NAME, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/api/auth",
+  });
+};
+
+export const register = async (req: Request, res: Response) => {
   try {
+    const { name, email, password } = req.body;
+    const user = await registerUser(name, email, password);
+    const { accessToken, refreshToken } = await createSessionTokens(user.id);
 
-    const { name, email, password } = req.body
+    setRefreshCookie(res, refreshToken);
 
-    const user = await registerUser(
-      name,
-      email,
-      password
-    )
+    res.status(201).json({
+      user,
+      accessToken,
+    });
+  } catch (error: any) {
+    res.status(400).json({
+      message: error.message || "Registration failed",
+    });
+  }
+};
 
-    const token = generateToken(user.id)
+export const login = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    const user = await loginUser(email, password);
+    const { accessToken, refreshToken } = await createSessionTokens(user.id);
+
+    setRefreshCookie(res, refreshToken);
 
     res.json({
       user,
-      token
-    })
-
+      accessToken,
+    });
   } catch (error: any) {
-
     res.status(400).json({
-      message: error.message
-    })
-
+      message: error.message || "Login failed",
+    });
   }
-}
+};
 
-export const login = async (
-  req: Request,
-  res: Response
-) => {
-
+export const refresh = async (req: Request, res: Response) => {
   try {
+    const cookies = parseCookies(req);
+    const incomingRefreshToken = cookies[REFRESH_COOKIE_NAME];
 
-    const { email, password } = req.body
+    if (!incomingRefreshToken) {
+      return res.status(401).json({ message: "Missing refresh token" });
+    }
 
-    const user = await loginUser(
-      email,
-      password
-    )
+    const { accessToken, refreshToken } = await rotateRefreshToken(incomingRefreshToken);
+    setRefreshCookie(res, refreshToken);
 
-    const token = generateToken(user.id)
-
-    res.json({
-      user,
-      token
-    })
-
-  } catch (error: any) {
-
-    res.status(400).json({
-      message: error.message
-    })
-
+    return res.json({ accessToken });
+  } catch {
+    clearRefreshCookie(res);
+    return res.status(401).json({ message: "Refresh failed" });
   }
-}
+};
 
-export const logout = async (
-  req: Request,
-  res: Response
-) => {
-
+export const logout = async (req: Request, res: Response) => {
   try {
-
-    // For JWT stateless auth
-    // Logout is handled on client side
-    // We just return success response
-
-    res.json({
-      message: "Logged out successfully"
-    })
-
-  } catch (error) {
-
-    res.status(500).json({
-      message: "Logout failed"
-    })
-
+    const cookies = parseCookies(req);
+    const incomingRefreshToken = cookies[REFRESH_COOKIE_NAME];
+    await revokeRefreshToken(incomingRefreshToken);
+    clearRefreshCookie(res);
+    res.json({ message: "Logged out successfully" });
+  } catch {
+    res.status(500).json({ message: "Logout failed" });
   }
-
-}
+};

@@ -1,55 +1,133 @@
+import { prisma } from "../lib/prisma";
+import { comparePassword, hashPassword } from "../utils/hash";
+import crypto from "crypto";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  hashToken,
+  verifyRefreshToken,
+} from "../utils/jwt";
 
-import { prisma } from "../lib/prisma"
-import { hashPassword, comparePassword } from "../utils/hash"
+const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const refreshTokenModel = (prisma as any).refreshToken;
 
-export const registerUser = async (
-  name: string,
-  email: string,
-  password: string
-) => {
+type SafeUser = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: Date;
+};
 
+const toSafeUser = (user: {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: Date;
+}): SafeUser => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  createdAt: user.createdAt,
+});
+
+export const registerUser = async (name: string, email: string, password: string) => {
   const existingUser = await prisma.user.findUnique({
-    where: { email }
-  })
+    where: { email },
+  });
 
   if (existingUser) {
-    throw new Error("User already exists")
+    throw new Error("User already exists");
   }
 
-  const hashedPassword = await hashPassword(password)
+  const hashedPassword = await hashPassword(password);
 
   const user = await prisma.user.create({
     data: {
       name,
       email,
-      password: hashedPassword
-    }
-  })
+      password: hashedPassword,
+    },
+  });
 
-  return user
-}
+  return toSafeUser(user);
+};
 
-export const loginUser = async (
-  email: string,
-  password: string
-) => {
-
+export const loginUser = async (email: string, password: string) => {
   const user = await prisma.user.findUnique({
-    where: { email }
-  })
+    where: { email },
+  });
 
   if (!user) {
-    throw new Error("Invalid credentials")
+    throw new Error("Invalid credentials");
   }
 
-  const isMatch = await comparePassword(
-    password,
-    user.password
-  )
-
+  const isMatch = await comparePassword(password, user.password);
   if (!isMatch) {
-    throw new Error("Invalid credentials")
+    throw new Error("Invalid credentials");
   }
 
-  return user
-}
+  return toSafeUser(user);
+};
+
+export const createSessionTokens = async (userId: string) => {
+  const tokenRecord = await refreshTokenModel.create({
+    data: {
+      userId,
+      tokenHash: crypto.randomBytes(32).toString("hex"),
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+    },
+  });
+
+  const refreshToken = generateRefreshToken(userId, tokenRecord.id);
+  const accessToken = generateAccessToken(userId);
+  const tokenHash = hashToken(refreshToken);
+
+  await refreshTokenModel.update({
+    where: { id: tokenRecord.id },
+    data: { tokenHash },
+  });
+
+  return { accessToken, refreshToken };
+};
+
+export const rotateRefreshToken = async (incomingRefreshToken: string) => {
+  const decoded = verifyRefreshToken(incomingRefreshToken);
+  const incomingHash = hashToken(incomingRefreshToken);
+
+  const storedToken = await refreshTokenModel.findUnique({
+    where: { tokenHash: incomingHash },
+  });
+
+  if (!storedToken || storedToken.id !== decoded.tokenId || storedToken.userId !== decoded.userId) {
+    throw new Error("Invalid refresh token");
+  }
+
+  if (storedToken.revokedAt) {
+    throw new Error("Refresh token revoked");
+  }
+
+  if (storedToken.expiresAt.getTime() <= Date.now()) {
+    throw new Error("Refresh token expired");
+  }
+
+  await refreshTokenModel.update({
+    where: { id: storedToken.id },
+    data: { revokedAt: new Date() },
+  });
+
+  return createSessionTokens(storedToken.userId);
+};
+
+export const revokeRefreshToken = async (token: string | undefined) => {
+  if (!token) return;
+  const tokenHash = hashToken(token);
+  await refreshTokenModel.updateMany({
+    where: {
+      tokenHash,
+      revokedAt: null,
+    },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
+};
