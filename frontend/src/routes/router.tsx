@@ -8,7 +8,7 @@ import Register from "../pages/Register";
 import Orders from "../pages/Orders";
 import Profile from "../pages/Profile";
 import Landing from "../pages/Landing";
-
+import Checkout from "../pages/Checkout";
 import ProtectedRoute from "../components/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -24,7 +24,6 @@ export const router = createBrowserRouter([
     path: "/products/:id",
     element: <ProductDetails />,
   },
-
 
   {
     path: "/cart",
@@ -50,8 +49,14 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
-
-
+  {
+    path: "/checkout",
+    element: <Checkout />,
+  },
+  {
+    path: "/orders",
+    element: <Orders />,
+  },
   {
     path: "/login",
     element: <Login />,
@@ -59,5 +64,9 @@ export const router = createBrowserRouter([
   {
     path: "/register",
     element: <Register />,
+  },
+  {
+    path: "/profile",
+    element: <Profile />
   },
 ]);

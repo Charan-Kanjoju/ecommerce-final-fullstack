@@ -7,26 +7,17 @@ import {
   getOrderByIdService
 } from "../services/orderService"
 
-export const checkout = async (
-  req: AuthRequest,
-  res: Response
-) => {
-
+export const checkout = async (req: AuthRequest, res: Response) => {
   try {
+    const order = await checkoutService(req.userId!, req.body);
 
-    const order = await checkoutService(req.userId!)
-
-    res.json(order)
-
+    res.json(order);
   } catch (error: any) {
-
     res.status(400).json({
-      message: error.message
-    })
-
+      message: error.message,
+    });
   }
-
-}
+};
 
 export const getOrders = async (
   req: AuthRequest,

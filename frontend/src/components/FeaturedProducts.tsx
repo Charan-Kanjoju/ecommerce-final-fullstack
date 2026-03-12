@@ -3,7 +3,7 @@ import ProductCard from "./ProductCard";
 import { api } from "../api/client";
 
 export default function FeaturedProducts() {
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
       const res = await api.get("/products");
@@ -11,22 +11,39 @@ export default function FeaturedProducts() {
     },
   });
 
-  return (
-    <section className="py-16">
-      <h2 className="text-3xl font-bold mb-10 text-center">
-        Featured Products
-      </h2>
+  if (isLoading) {
+    return (
+      <section className="py-20">
+        <div className="text-center">Loading products...</div>
+      </section>
+    );
+  }
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {data?.slice(0, 8).map((product: any) => (
-          <ProductCard
-            key={product.id}
-            id={product.id}
-            name={product.name}
-            price={product.price}
-            image={product.image}
-          />
-        ))}
+  return (
+    <section className="py-20 bg-gray-50">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center justify-between mb-10">
+          <h2 className="text-3xl font-bold">Featured Products</h2>
+
+          <a
+            href="/products"
+            className="text-sm font-medium text-gray-600 hover:text-black"
+          >
+            View All →
+          </a>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+          {data?.slice(0, 8).map((product: any) => (
+            <ProductCard
+              key={product.id}
+              id={product.id}
+              name={product.name}
+              price={product.price}
+              image={product.image}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );

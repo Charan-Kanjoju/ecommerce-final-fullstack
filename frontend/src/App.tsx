@@ -2,6 +2,7 @@ import { RouterProvider } from "react-router-dom"
 import { router } from "./routes/router"
 import { useCartStore } from "./store/useCartStore";
 import { useEffect } from "react";
+import Orders from "./pages/Orders";
 
 
 function App() {

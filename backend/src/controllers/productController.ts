@@ -20,14 +20,17 @@ export const getProducts = async (
 
     const { search, category, page, limit } = req.query
 
-    const products = await getProductsService(
+    const currentPage = Number(page) || 1
+    const pageLimit = Number(limit) || 50
+
+    const result = await getProductsService(
       search as string,
       category as string,
-      Number(page) || 1,
-      Number(limit) || 100
+      currentPage,
+      pageLimit
     )
 
-    res.json(products)
+    res.json(result)
 
   } catch (error) {
 
@@ -44,16 +47,20 @@ export const getProductById = async (
 ) => {
   try {
 
-    const product = await getProductByIdService(
-      req.params.id
-    )
+    const product = await getProductByIdService(req.params.id)
+
+    if (!product) {
+      return res.status(404).json({
+        message: "Product not found"
+      })
+    }
 
     res.json(product)
 
   } catch (error) {
 
     res.status(500).json({
-      message: "Product not found"
+      message: "Product fetch failed"
     })
 
   }
@@ -65,9 +72,7 @@ export const createProduct = async (
 ) => {
   try {
 
-    const product = await createProductService(
-      req.body
-    )
+    const product = await createProductService(req.body)
 
     res.status(201).json(product)
 
