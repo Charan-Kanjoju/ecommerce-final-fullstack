@@ -2,11 +2,23 @@ import { useQuery } from "@tanstack/react-query";
 import ProductCard from "./ProductCard";
 import { api } from "../api/client";
 
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+};
+
+type ProductsResponse = {
+  products: Product[];
+  nextPage?: number;
+};
+
 export default function FeaturedProducts() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<ProductsResponse>({
     queryKey: ["products"],
     queryFn: async () => {
-      const res = await api.get("/products");
+      const res = await api.get("/products?page=1");
       return res.data;
     },
   });
@@ -18,6 +30,8 @@ export default function FeaturedProducts() {
       </section>
     );
   }
+
+  const products = data?.products?.slice(0, 8) || [];
 
   return (
     <section className="py-20 bg-gray-50">
@@ -34,7 +48,7 @@ export default function FeaturedProducts() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {data?.slice(0, 8).map((product: any) => (
+          {products.map((product) => (
             <ProductCard
               key={product.id}
               id={product.id}

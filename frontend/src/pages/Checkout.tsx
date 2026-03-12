@@ -21,20 +21,23 @@ export default function Checkout() {
     paymentMethod: "COD",
   });
 
-  const { data: products } = useQuery({
+  const { data } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const res = await api.get("/products");
-      return res.data;
+      const res = await api.get("/products?page=1");
+      return res.data.products; // ✅ FIX
     },
   });
 
-  const total = items.reduce((sum: number, item: any) => {
-    const product = products?.find((p: any) => p.id === item.productId);
-    if (!product) return sum;
+  const products = data || [];
 
-    return sum + product.price * item.quantity;
-  }, 0);
+  const total =
+    items?.reduce((sum: number, item: any) => {
+      const product = products.find((p: any) => p.id === item.productId);
+      if (!product) return sum;
+
+      return sum + product.price * item.quantity;
+    }, 0) ?? 0;
 
   const handleChange = (e: any) => {
     setForm({
@@ -69,21 +72,21 @@ export default function Checkout() {
 
             <div className="space-y-4">
               <input
-                className="w-full border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full border p-3 rounded-lg"
                 placeholder="Full Name"
                 name="fullName"
                 onChange={handleChange}
               />
 
               <input
-                className="w-full border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full border p-3 rounded-lg"
                 placeholder="Address Line 1"
                 name="addressLine1"
                 onChange={handleChange}
               />
 
               <input
-                className="w-full border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full border p-3 rounded-lg"
                 placeholder="Address Line 2 (optional)"
                 name="addressLine2"
                 onChange={handleChange}
@@ -91,14 +94,14 @@ export default function Checkout() {
 
               <div className="grid grid-cols-2 gap-4">
                 <input
-                  className="border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                  className="border p-3 rounded-lg"
                   placeholder="City"
                   name="city"
                   onChange={handleChange}
                 />
 
                 <input
-                  className="border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                  className="border p-3 rounded-lg"
                   placeholder="State"
                   name="state"
                   onChange={handleChange}
@@ -107,14 +110,14 @@ export default function Checkout() {
 
               <div className="grid grid-cols-2 gap-4">
                 <input
-                  className="border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                  className="border p-3 rounded-lg"
                   placeholder="Postal Code"
                   name="postalCode"
                   onChange={handleChange}
                 />
 
                 <input
-                  className="border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                  className="border p-3 rounded-lg"
                   placeholder="Country"
                   name="country"
                   onChange={handleChange}
@@ -122,7 +125,7 @@ export default function Checkout() {
               </div>
 
               <input
-                className="w-full border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full border p-3 rounded-lg"
                 placeholder="Phone Number"
                 name="phone"
                 onChange={handleChange}
@@ -130,7 +133,7 @@ export default function Checkout() {
 
               <select
                 name="paymentMethod"
-                className="w-full border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full border p-3 rounded-lg"
                 onChange={handleChange}
               >
                 <option value="COD">Cash On Delivery</option>
@@ -145,7 +148,7 @@ export default function Checkout() {
 
             <div className="space-y-4">
               {items.map((item: any) => {
-                const product = products?.find(
+                const product = products.find(
                   (p: any) => p.id === item.productId,
                 );
 

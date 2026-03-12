@@ -13,20 +13,21 @@ export default function Cart() {
     fetchCart();
 
     const fetchProducts = async () => {
-      const res = await api.get("/products");
-      setProducts(res.data);
+      const res = await api.get("/products?page=1");
+      setProducts(res.data.products); // ✅ FIX
     };
 
     fetchProducts();
   }, []);
 
-  const total = items?.reduce((sum: number, item: any) => {
-    const product = products.find((p) => p.id === item.productId);
-    if (!product) return sum;
-    return sum + product.price * item.quantity;
-  }, 0);
+  const total =
+    items?.reduce((sum: number, item: any) => {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product) return sum;
+      return sum + product.price * item.quantity;
+    }, 0) ?? 0;
 
-  if (!items || items.length === 0) {
+  if (!items || items?.length === 0) {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center h-[60vh] text-center">

@@ -1,4 +1,4 @@
-import { prisma } from "../lib/prisma"
+import { prisma } from "../lib/prisma";
 
 export const checkoutService = async (userId: string, shipping: any) => {
   const cart = await prisma.cart.findUnique({
@@ -6,7 +6,7 @@ export const checkoutService = async (userId: string, shipping: any) => {
     include: { items: true },
   });
 
-  if (!cart || cart.items.length === 0) {
+  if (!cart || cart.items?.length === 0) {
     throw new Error("Cart is empty");
   }
 
@@ -60,32 +60,25 @@ export const checkoutService = async (userId: string, shipping: any) => {
   return order;
 };
 export const getOrdersService = async (userId: string) => {
-
   return prisma.order.findMany({
     where: { userId },
     include: {
-      items: true
+      items: true,
     },
     orderBy: {
-      createdAt: "desc"
-    }
-  })
+      createdAt: "desc",
+    },
+  });
+};
 
-}
-
-export const getOrderByIdService = async (
-  userId: string,
-  orderId: string
-) => {
-
+export const getOrderByIdService = async (userId: string, orderId: string) => {
   return prisma.order.findFirst({
     where: {
       id: orderId,
-      userId
+      userId,
     },
     include: {
-      items: true
-    }
-  })
-
-}
+      items: true,
+    },
+  });
+};

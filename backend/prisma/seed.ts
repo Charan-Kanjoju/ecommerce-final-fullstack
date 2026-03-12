@@ -1,17 +1,14 @@
-import axios from "axios"
-import { prisma } from "../src/lib/prisma"
+import axios from "axios";
+import { prisma } from "../src/lib/prisma";
 
 async function main() {
+  console.log("🌱 Fetching products from API...");
 
-  console.log("🌱 Fetching products from API...")
+  const response = await axios.get("https://dummyjson.com/products?limit=100");
 
-  const response = await axios.get(
-    "https://dummyjson.com/products?limit=100"
-  )
+  const products = response.data.products;
 
-  const products = response.data.products
-
-  console.log(`Fetched ${products.length} products`)
+  console.log(`Fetched ${products?.length} products`);
 
   const formattedProducts = products.map((product: any) => ({
     name: product.title,
@@ -19,22 +16,22 @@ async function main() {
     price: product.price,
     image: product.thumbnail,
     category: product.category,
-    stock: product.stock ?? 50
-  }))
+    stock: product.stock ?? 50,
+  }));
 
   await prisma.product.createMany({
     data: formattedProducts,
-    skipDuplicates: true
-  })
+    skipDuplicates: true,
+  });
 
-  console.log("✅ Products inserted into database")
+  console.log("✅ Products inserted into database");
 }
 
 main()
   .catch((error) => {
-    console.error(error)
-    process.exit(1)
+    console.error(error);
+    process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect()
-  })
+    await prisma.$disconnect();
+  });

@@ -1,57 +1,99 @@
+import { useInfiniteQuery } from "@tanstack/react-query";
+import type { QueryFunctionContext, InfiniteData } from "@tanstack/react-query";
+import { useRef, useEffect } from "react";
 import Layout from "../components/Layout";
 import ProductCard from "../components/ProductCard";
-import ProductSearch from "../components/ProductSearch";
-import CategoryFilter from "../components/CategoryFilter";
-import Pagination from "../components/Pagination";
-
-import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 
-import { useState } from "react";
+// Product type
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+};
+
+// API response type
+type ProductsResponse = {
+  products: Product[];
+  nextPage?: number;
+};
+
+// Properly typed query function
+const fetchProductsPage = async ({
+  pageParam = 1,
+}: QueryFunctionContext<["products"], number>): Promise<ProductsResponse> => {
+  const res = await api.get(`/products?page=${pageParam}`);
+  return res.data;
+};
 
 export default function Products() {
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
-  const [page, setPage] = useState(1);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const { data } = useQuery({
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    error,
+  } = useInfiniteQuery<
+    ProductsResponse,
+    Error,
+    InfiniteData<ProductsResponse>,
+    ["products"],
+    number
+  >({
     queryKey: ["products"],
-    queryFn: async () => {
-      const res = await api.get("/products");
-
-      return res.data;
+    queryFn: fetchProductsPage,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage || !lastPage.products) return undefined;
+      return lastPage.nextPage ?? undefined;
     },
+    initialPageParam: 1,
   });
 
-  let filtered = data || [];
+  const products = data?.pages?.flatMap((page) => page.products ?? []) ?? [];
 
-  if (search) {
-    filtered = filtered.filter((p: any) =>
-      p.name.toLowerCase().includes(search.toLowerCase()),
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.5 },
     );
-  }
 
-  if (category !== "all") {
-    filtered = filtered.filter((p: any) => p.category === category);
-  }
+    const current = loadMoreRef.current;
+    if (current) observer.observe(current);
 
-  const pageSize = 8;
+    return () => {
+      if (current) observer.unobserve(current);
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const start = (page - 1) * pageSize;
-  const end = start + pageSize;
+  if (isLoading && hasNextPage)
+    return (
+      <Layout>
+        <div className="p-8 text-center text-lg">Loading products...</div>
+      </Layout>
+    );
 
-  const paginatedProducts = filtered.slice(start, end);
+  if (isError)
+    return (
+      <Layout>
+        <div className="p-8 text-center text-red-500">{error.message}</div>
+      </Layout>
+    );
 
   return (
     <Layout>
-      <h1 className="text-3xl font-bold mb-6">Products</h1>
-
-      <ProductSearch search={search} setSearch={setSearch} />
-
-      <CategoryFilter category={category} setCategory={setCategory} />
+      <h1 className="text-3xl font-bold mb-8">Products</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {paginatedProducts.map((product: any) => (
+        {products?.map((product) => (
           <ProductCard
             key={product.id}
             id={product.id}
@@ -62,7 +104,11 @@ export default function Products() {
         ))}
       </div>
 
-      <Pagination page={page} setPage={setPage} />
+      <div ref={loadMoreRef} className="h-16 flex items-center justify-center">
+        {isFetchingNextPage && (
+          <p className="text-gray-500">Loading more products...</p>
+        )}
+      </div>
     </Layout>
   );
 }
