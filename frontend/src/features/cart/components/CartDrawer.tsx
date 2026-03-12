@@ -4,11 +4,13 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useCartStore } from "../../../store/useCartStore";
 import { fetchProductsByIds, type Product } from "../../../services/product.service";
+import { useAuthStore } from "../../../store/useAuthStore";
 
 type CartProductMap = Record<string, Product>;
 
 export const CartDrawer = () => {
   const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { items, isDrawerOpen, setDrawerOpen, removeFromCart, updateCartItem } = useCartStore();
 
   const productIds = items.map((item) => item.productId);
@@ -34,6 +36,10 @@ export const CartDrawer = () => {
     if (!product) return sum;
     return sum + product.price * item.quantity;
   }, 0);
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <>
@@ -91,7 +97,7 @@ export const CartDrawer = () => {
                       </button>
                       <button
                         onClick={() => removeFromCart(item.id)}
-                        className="ml-auto rounded-full p-2 text-zinc-500 transition hover:bg-red-50 hover:text-red-600"
+                        className="ml-auto rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
                       >
                         <Trash2 size={14} />
                       </button>

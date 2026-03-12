@@ -1,3 +1,5 @@
+﻿import { useState } from "react";
+import type { FormEvent } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { LogIn, LogOut, Package, Search, ShoppingBag, User } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
@@ -9,6 +11,7 @@ export default function Navbar() {
   const { isAuthenticated, clearAuth } = useAuthStore();
   const cartCount = useCartStore((state) => state.cartCount || 0);
   const setDrawerOpen = useCartStore((state) => state.setDrawerOpen);
+  const [search, setSearch] = useState("");
 
   const handleLogout = async () => {
     try {
@@ -19,9 +22,15 @@ export default function Navbar() {
     }
   };
 
+  const handleSearch = (event: FormEvent) => {
+    event.preventDefault();
+    const q = search.trim();
+    navigate(q ? `/products?q=${encodeURIComponent(q)}` : "/products");
+  };
+
   return (
     <nav className="sticky top-0 z-50 border-b border-zinc-200/80 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 md:px-6">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-4 md:px-6">
         <Link to="/" className="text-2xl font-semibold tracking-tight text-zinc-900">
           AURORA
         </Link>
@@ -42,13 +51,33 @@ export default function Navbar() {
           )}
         </div>
 
+        <form onSubmit={handleSearch} className="hidden min-w-56 items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 md:flex">
+          <Search size={15} className="text-zinc-400" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search products"
+            className="w-full bg-transparent px-2 text-sm outline-none"
+          />
+        </form>
+
         <div className="flex items-center gap-2">
-          <Link to="/products" className="rounded-full p-2 text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900">
+          <button
+            onClick={() => navigate(search.trim() ? `/products?q=${encodeURIComponent(search.trim())}` : "/products")}
+            className="rounded-full p-2 text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900 md:hidden"
+            aria-label="Search products"
+          >
             <Search size={18} />
-          </Link>
+          </button>
 
           <button
-            onClick={() => setDrawerOpen(true)}
+            onClick={() => {
+              if (!isAuthenticated) {
+                navigate("/login");
+                return;
+              }
+              setDrawerOpen(true);
+            }}
             className="relative rounded-full p-2 text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900"
             aria-label="Open cart drawer"
           >

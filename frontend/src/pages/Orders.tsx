@@ -11,15 +11,15 @@ type FilterStatus = "ALL" | OrderStatus;
 const statusMeta: Record<OrderStatus, { label: string; classes: string }> = {
   PENDING: {
     label: "Placed",
-    classes: "bg-amber-50 text-amber-700 border-amber-200",
+    classes: "bg-zinc-100 text-zinc-700 border-zinc-200",
   },
   SHIPPED: {
     label: "Shipped",
-    classes: "bg-blue-50 text-blue-700 border-blue-200",
+    classes: "bg-zinc-100 text-zinc-700 border-zinc-200",
   },
   DELIVERED: {
     label: "Delivered",
-    classes: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    classes: "bg-zinc-100 text-zinc-700 border-zinc-200",
   },
 };
 

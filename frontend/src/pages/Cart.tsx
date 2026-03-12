@@ -77,7 +77,7 @@ export default function Cart() {
                         >
                           +
                         </button>
-                        <button onClick={() => removeFromCart(item.id)} className="ml-auto text-sm text-red-600">
+                        <button onClick={() => removeFromCart(item.id)} className="ml-auto text-sm text-zinc-700">
                           Remove
                         </button>
                       </div>

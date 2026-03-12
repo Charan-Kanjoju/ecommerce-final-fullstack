@@ -21,7 +21,8 @@ export default function Products() {
   const setDrawerOpen = useCartStore((state) => state.setDrawerOpen);
 
   const initialCategory = searchParams.get("category") || ALL_CATEGORY;
-  const [searchTerm, setSearchTerm] = useState("");
+  const initialQuery = searchParams.get("q") || "";
+  const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [sortBy, setSortBy] = useState<"newest" | "price_asc" | "price_desc">("newest");
   const [minPrice, setMinPrice] = useState(0);
@@ -74,7 +75,9 @@ export default function Products() {
 
   useEffect(() => {
     const nextCategory = searchParams.get("category") || ALL_CATEGORY;
+    const nextQuery = searchParams.get("q") || "";
     setSelectedCategory(nextCategory);
+    setSearchTerm(nextQuery);
   }, [searchParams]);
 
   const updateCategory = (category: string) => {
@@ -89,6 +92,18 @@ export default function Products() {
       return next;
     });
   };
+
+  useEffect(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (debouncedSearch.trim()) {
+        next.set("q", debouncedSearch.trim());
+      } else {
+        next.delete("q");
+      }
+      return next;
+    });
+  }, [debouncedSearch, setSearchParams]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -197,7 +212,7 @@ export default function Products() {
           {isLoading ? (
             <ProductGridSkeleton />
           ) : isError ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-100 p-6 text-zinc-700">
               Failed to load products: {error.message}
             </div>
           ) : products.length === 0 ? (

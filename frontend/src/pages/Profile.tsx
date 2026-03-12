@@ -1,13 +1,20 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+﻿import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import Layout from "../components/Layout";
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+
+type ProfileData = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+};
 
 export default function Profile() {
   const navigate = useNavigate();
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading } = useQuery<ProfileData>({
     queryKey: ["profile"],
     queryFn: async () => {
       const res = await api.get("/user/profile");
@@ -15,7 +22,7 @@ export default function Profile() {
     },
   });
 
-  const { data: orders } = useQuery({
+  const { data: orders = [] } = useQuery<any[]>({
     queryKey: ["orders"],
     queryFn: async () => {
       const res = await api.get("/orders");
@@ -29,142 +36,116 @@ export default function Profile() {
     if (profile) setName(profile.name);
   }, [profile]);
 
+  const totalSpent = useMemo(
+    () => orders.reduce((sum, order) => sum + Number(order.total || 0), 0),
+    [orders],
+  );
+
   const mutation = useMutation({
     mutationFn: async () => {
       await api.put("/user/profile", { name });
     },
   });
 
-  if (isLoading) {
+  if (isLoading || !profile) {
     return (
       <Layout>
-        <div className="flex justify-center items-center h-[60vh]">
-          Loading profile...
-        </div>
+        <div className="h-56 animate-pulse rounded-3xl bg-zinc-200" />
       </Layout>
     );
   }
 
   return (
     <Layout>
-      <div className="max-w-5xl mx-auto space-y-10">
-        {/* PROFILE HEADER */}
-        <div className="bg-white border rounded-xl shadow-sm p-8 flex items-center gap-6">
-          <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-3xl font-bold">
-            {profile.name?.charAt(0).toUpperCase()}
+      <div className="mx-auto max-w-6xl space-y-8">
+        <section className="overflow-hidden rounded-3xl border border-zinc-200 bg-white">
+          <div className="bg-zinc-900 p-8 text-white">
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-300">My Account</p>
+            <h1 className="mt-2 text-3xl font-semibold">Welcome, {profile.name}</h1>
+            <p className="mt-2 text-sm text-zinc-200/90">Manage profile details, track purchases, and monitor your shopping activity.</p>
           </div>
-
-          <div>
-            <h2 className="text-2xl font-semibold">{profile.name}</h2>
-            <p className="text-gray-500">{profile.email}</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Member since {new Date(profile.createdAt).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-
-        {/* ACCOUNT STATS */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="border rounded-xl p-6 bg-white shadow-sm">
-            <p className="text-gray-500 text-sm">Total Orders</p>
-            <p className="text-2xl font-bold">{orders?.length || 0}</p>
-          </div>
-
-          <div className="border rounded-xl p-6 bg-white shadow-sm">
-            <p className="text-gray-500 text-sm">Account Status</p>
-            <p className="font-semibold text-green-600">Active</p>
-          </div>
-
-          <div className="border rounded-xl p-6 bg-white shadow-sm">
-            <p className="text-gray-500 text-sm">Member Since</p>
-            <p className="font-semibold">
-              {new Date(profile.createdAt).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-
-        {/* PROFILE DETAILS */}
-        <div className="bg-white border rounded-xl shadow-sm p-8">
-          <h2 className="text-xl font-semibold mb-6">Profile Details</h2>
-
-          <div className="space-y-5">
+          <div className="flex items-center gap-5 p-6">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-900 text-3xl font-bold text-white">
+              {profile.name?.charAt(0).toUpperCase()}
+            </div>
             <div>
-              <label className="text-sm text-gray-500">Email</label>
-              <input
-                value={profile.email}
-                disabled
-                className="w-full border p-3 rounded-lg bg-gray-100 mt-1"
-              />
+              <p className="text-xl font-semibold text-zinc-900">{profile.name}</p>
+              <p className="text-sm text-zinc-500">{profile.email}</p>
+              <p className="mt-1 text-xs text-zinc-400">Member since {new Date(profile.createdAt).toLocaleDateString()}</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+            <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">Total Orders</p>
+            <p className="mt-2 text-3xl font-semibold text-zinc-900">{orders.length}</p>
+          </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+            <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">Total Spent</p>
+            <p className="mt-2 text-3xl font-semibold text-zinc-900">${totalSpent.toFixed(2)}</p>
+          </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+            <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">Status</p>
+            <p className="mt-2 inline-flex rounded-full bg-zinc-100 px-3 py-1 text-sm font-semibold text-zinc-700">Active</p>
+          </div>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
+          <div className="rounded-3xl border border-zinc-200 bg-white p-6">
+            <h2 className="text-xl font-semibold text-zinc-900">Profile Details</h2>
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="text-sm text-zinc-500">Email</label>
+                <input value={profile.email} disabled className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-100 p-3" />
+              </div>
+
+              <div>
+                <label className="text-sm text-zinc-500">Full Name</label>
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  className="mt-1 w-full rounded-xl border border-zinc-200 p-3 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                />
+              </div>
+
+              <button
+                onClick={() => mutation.mutate()}
+                className="rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white"
+              >
+                {mutation.isPending ? "Updating..." : "Save changes"}
+              </button>
+
+              {mutation.isSuccess && <p className="text-sm text-zinc-700">Profile updated successfully.</p>}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-zinc-200 bg-white p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-zinc-900">Recent Orders</h3>
+              <button onClick={() => navigate("/orders")} className="text-sm font-medium text-zinc-900">
+                View all
+              </button>
             </div>
 
-            <div>
-              <label className="text-sm text-gray-500">Full Name</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full border p-3 rounded-lg mt-1 focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-
-            <button
-              onClick={() => mutation.mutate()}
-              className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition"
-            >
-              {mutation.isPending ? "Updating..." : "Update Profile"}
-            </button>
-
-            {mutation.isSuccess && (
-              <p className="text-green-600 text-sm">
-                Profile updated successfully
-              </p>
+            {orders.length === 0 ? (
+              <p className="text-sm text-zinc-500">No orders yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {orders.slice(0, 4).map((order: any) => (
+                  <div key={order.id} className="rounded-xl border border-zinc-200 p-4">
+                    <p className="text-sm font-medium text-zinc-900">Order for {order.fullName}</p>
+                    <p className="text-xs text-zinc-500">{new Date(order.createdAt).toLocaleDateString()}</p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <p className="text-sm font-semibold text-zinc-900">${Number(order.total).toFixed(2)}</p>
+                      <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-700">{order.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-        </div>
-
-        {/* RECENT ORDERS */}
-        <div className="bg-white border rounded-xl shadow-sm p-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Recent Orders</h2>
-
-            <button
-              onClick={() => navigate("/orders")}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              View All Orders
-            </button>
-          </div>
-
-          {orders?.length === 0 && (
-            <p className="text-gray-500">No orders yet</p>
-          )}
-
-          <div className="space-y-4">
-            {orders?.slice(0, 3).map((order: any) => (
-              <div
-                key={order.id}
-                className="flex justify-between border rounded-lg p-4"
-              >
-                <div>
-                  <p className="font-medium text-sm">
-                    Order #{order.id.slice(0, 8)}
-                  </p>
-
-                  <p className="text-xs text-gray-500">
-                    {new Date(order.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <p className="font-semibold">${order.total}</p>
-
-                  <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                    {order.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        </section>
       </div>
     </Layout>
   );

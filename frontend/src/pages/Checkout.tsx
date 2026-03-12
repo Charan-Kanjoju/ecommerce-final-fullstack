@@ -94,6 +94,23 @@ export default function Checkout() {
     await checkoutMutation.mutateAsync();
   };
 
+  if (items.length === 0) {
+    return (
+      <Layout>
+        <div className="mx-auto max-w-xl rounded-3xl border border-zinc-200 bg-white p-10 text-center">
+          <h1 className="text-2xl font-semibold text-zinc-900">Your cart is empty</h1>
+          <p className="mt-2 text-sm text-zinc-600">Add products to your bag before proceeding to checkout.</p>
+          <button
+            onClick={() => navigate("/products")}
+            className="mt-6 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white"
+          >
+            Continue shopping
+          </button>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <h1 className="mb-8 text-3xl font-semibold tracking-tight">Checkout</h1>
@@ -237,7 +254,7 @@ export default function Checkout() {
             <span>${total.toFixed(2)}</span>
           </div>
 
-          {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+          {error && <p className="mt-4 text-sm text-zinc-700">{error}</p>}
 
           <button
             type="submit"
