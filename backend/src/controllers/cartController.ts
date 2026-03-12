@@ -18,10 +18,16 @@ export const addToCart = async (
 
     const { productId, quantity } = req.body
 
+    if (!productId || !quantity || Number(quantity) <= 0) {
+      return res.status(400).json({
+        message: "Valid productId and quantity are required"
+      })
+    }
+
     const item = await addToCartService(
       req.userId!,
       productId,
-      quantity
+      Number(quantity)
     )
 
     res.json(item)
@@ -66,9 +72,16 @@ export const updateCartItem = async (
 
     const { itemId, quantity } = req.body
 
+    if (!itemId || !quantity || Number(quantity) <= 0) {
+      return res.status(400).json({
+        message: "Valid itemId and quantity are required"
+      })
+    }
+
     const item = await updateCartItemService(
+      req.userId!,
       itemId,
-      quantity
+      Number(quantity)
     )
 
     res.json(item)
@@ -92,7 +105,13 @@ export const removeCartItem = async (
 
     const { itemId } = req.body
 
-    await removeCartItemService(itemId)
+    if (!itemId) {
+      return res.status(400).json({
+        message: "itemId is required"
+      })
+    }
+
+    await removeCartItemService(req.userId!, itemId)
 
     res.json({
       message: "Item removed"

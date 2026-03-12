@@ -3,12 +3,12 @@ import { useAuthStore } from "../store/useAuthStore";
 
 export const api = axios.create({
   baseURL: "https://ecommerce-final-fullstack.onrender.com/api",
-  withCredentials: true,
+ 
 });
 
 const refreshClient = axios.create({
   baseURL: "https://ecommerce-final-fullstack.onrender.com/api",
-  withCredentials: true,
+
 });
 
 let refreshPromise: Promise<string | null> | null = null;

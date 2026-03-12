@@ -10,6 +10,7 @@ import {
 
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const refreshTokenModel = (prisma as any).refreshToken;
+const hasRefreshTokenStore = Boolean(refreshTokenModel);
 
 type SafeUser = {
   id: string;
@@ -70,6 +71,12 @@ export const loginUser = async (email: string, password: string) => {
 };
 
 export const createSessionTokens = async (userId: string) => {
+  const accessToken = generateAccessToken(userId);
+
+  if (!hasRefreshTokenStore) {
+    return { accessToken, refreshToken: null as string | null };
+  }
+
   const tokenRecord = await refreshTokenModel.create({
     data: {
       userId,
@@ -79,7 +86,6 @@ export const createSessionTokens = async (userId: string) => {
   });
 
   const refreshToken = generateRefreshToken(userId, tokenRecord.id);
-  const accessToken = generateAccessToken(userId);
   const tokenHash = hashToken(refreshToken);
 
   await refreshTokenModel.update({
@@ -91,6 +97,10 @@ export const createSessionTokens = async (userId: string) => {
 };
 
 export const rotateRefreshToken = async (incomingRefreshToken: string) => {
+  if (!hasRefreshTokenStore) {
+    throw new Error("Refresh token store is not configured");
+  }
+
   const decoded = verifyRefreshToken(incomingRefreshToken);
   const incomingHash = hashToken(incomingRefreshToken);
 
@@ -119,6 +129,7 @@ export const rotateRefreshToken = async (incomingRefreshToken: string) => {
 };
 
 export const revokeRefreshToken = async (token: string | undefined) => {
+  if (!hasRefreshTokenStore) return;
   if (!token) return;
   const tokenHash = hashToken(token);
   await refreshTokenModel.updateMany({

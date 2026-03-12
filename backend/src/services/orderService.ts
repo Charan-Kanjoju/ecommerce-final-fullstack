@@ -1,6 +1,22 @@
 import { prisma } from "../lib/prisma";
 
 export const checkoutService = async (userId: string, shipping: any) => {
+  const requiredFields = [
+    "fullName",
+    "addressLine1",
+    "city",
+    "state",
+    "postalCode",
+    "country",
+    "phone",
+  ];
+
+  for (const field of requiredFields) {
+    if (!shipping?.[field]) {
+      throw new Error(`Missing required field: ${field}`);
+    }
+  }
+
   const cart = await prisma.cart.findUnique({
     where: { userId },
     include: { items: true },
@@ -44,7 +60,7 @@ export const checkoutService = async (userId: string, shipping: any) => {
       country: shipping.country,
       phone: shipping.phone,
 
-      paymentMethod: shipping.paymentMethod,
+      paymentMethod: shipping.paymentMethod || "COD",
 
       items: {
         create: orderItemsData,

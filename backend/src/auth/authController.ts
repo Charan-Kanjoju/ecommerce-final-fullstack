@@ -8,6 +8,14 @@ import {
 } from "./authService";
 
 const REFRESH_COOKIE_NAME = "refreshToken";
+const isProduction = process.env.NODE_ENV === "production";
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: "/api/auth",
+};
 
 const parseCookies = (req: Request) => {
   const raw = req.headers.cookie;
@@ -20,31 +28,26 @@ const parseCookies = (req: Request) => {
 };
 
 const setRefreshCookie = (res: Response, refreshToken: string) => {
-  res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/api/auth",
-  });
+  res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions);
 };
 
 const clearRefreshCookie = (res: Response) => {
-  res.clearCookie(REFRESH_COOKIE_NAME, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/api/auth",
-  });
+  res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions);
 };
 
 export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Name, email and password are required" });
+    }
+
     const user = await registerUser(name, email, password);
     const { accessToken, refreshToken } = await createSessionTokens(user.id);
 
-    setRefreshCookie(res, refreshToken);
+    if (refreshToken) {
+      setRefreshCookie(res, refreshToken);
+    }
 
     res.status(201).json({
       user,
@@ -60,10 +63,16 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
     const user = await loginUser(email, password);
     const { accessToken, refreshToken } = await createSessionTokens(user.id);
 
-    setRefreshCookie(res, refreshToken);
+    if (refreshToken) {
+      setRefreshCookie(res, refreshToken);
+    }
 
     res.json({
       user,
@@ -86,7 +95,9 @@ export const refresh = async (req: Request, res: Response) => {
     }
 
     const { accessToken, refreshToken } = await rotateRefreshToken(incomingRefreshToken);
-    setRefreshCookie(res, refreshToken);
+    if (refreshToken) {
+      setRefreshCookie(res, refreshToken);
+    }
 
     return res.json({ accessToken });
   } catch {
