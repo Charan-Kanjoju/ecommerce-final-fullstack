@@ -1,6 +1,6 @@
-import { Heart, Eye } from "lucide-react";
+import { Eye } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useWishlistStore } from "../../../store/useWishlistStore";
+
 import type { Product } from "../../../services/product.service";
 import { formatCategoryLabel } from "../../../utils/categories";
 
@@ -10,8 +10,7 @@ type ProductGridCardProps = {
 };
 
 export const ProductGridCard = ({ product, onQuickPreview }: ProductGridCardProps) => {
-  const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
-  const isWishlisted = useWishlistStore((state) => state.isWishlisted(product.id));
+
 
   return (
     <article className="group relative overflow-hidden rounded-3xl border border-zinc-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
@@ -24,13 +23,7 @@ export const ProductGridCard = ({ product, onQuickPreview }: ProductGridCardProp
         />
       </Link>
 
-      <button
-        aria-label="Toggle wishlist"
-        onClick={() => toggleWishlist(product.id)}
-        className="absolute right-4 top-4 rounded-full border border-white/70 bg-white/90 p-2 text-zinc-700 backdrop-blur transition hover:scale-105"
-      >
-        <Heart size={16} className={isWishlisted ? "fill-zinc-900 text-zinc-900" : ""} />
-      </button>
+      
 
       <button
         aria-label="Quick preview"

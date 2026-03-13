@@ -6,8 +6,7 @@ import Layout from "../components/Layout";
 import { useCartStore } from "../store/useCartStore";
 import { fetchProductById, fetchProducts } from "../services/product.service";
 
-const SIZES = ["S", "M", "L", "XL"];
-const COLORS = ["Black", "White", "Stone"];
+
 
 export default function ProductDetails() {
   const { id = "" } = useParams();
@@ -15,8 +14,7 @@ export default function ProductDetails() {
   const setDrawerOpen = useCartStore((state) => state.setDrawerOpen);
 
   const [quantity, setQuantity] = useState(1);
-  const [size, setSize] = useState("M");
-  const [color, setColor] = useState("Black");
+
   const [isAdding, setIsAdding] = useState(false);
 
   const { data: product, isLoading } = useQuery({
@@ -68,39 +66,8 @@ export default function ProductDetails() {
           <p className="text-2xl font-semibold text-zinc-900">${product.price.toFixed(2)}</p>
           <p className="leading-relaxed text-zinc-600">{product.description}</p>
 
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">Size</p>
-            <div className="flex flex-wrap gap-2">
-              {SIZES.map((option) => (
-                <button
-                  key={option}
-                  onClick={() => setSize(option)}
-                  className={`rounded-full border px-4 py-2 text-sm transition ${
-                    size === option ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200"
-                  }`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">Color</p>
-            <div className="flex flex-wrap gap-2">
-              {COLORS.map((option) => (
-                <button
-                  key={option}
-                  onClick={() => setColor(option)}
-                  className={`rounded-full border px-4 py-2 text-sm transition ${
-                    color === option ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200"
-                  }`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </div>
+          
 
           <div className="flex items-center gap-3">
             <button
