@@ -24,7 +24,7 @@ export default function Categories() {
             to={`/products?category=${encodeURIComponent(category)}`}
             className="group rounded-3xl border border-zinc-200 bg-white p-6 transition hover:-translate-y-1 hover:shadow-xl"
           >
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Category</p>
+           
             <p className="mt-3 text-2xl font-semibold text-zinc-900">{formatCategoryLabel(category)}</p>
             <p className="mt-4 text-sm text-zinc-500 transition group-hover:text-zinc-700">Shop now</p>
           </Link>

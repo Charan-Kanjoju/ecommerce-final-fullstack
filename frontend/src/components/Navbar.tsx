@@ -1,6 +1,6 @@
-﻿import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Heart, LogIn, LogOut, Package, Search, ShoppingBag, User } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useCartStore } from "../store/useCartStore";
@@ -9,11 +9,26 @@ import { logoutUser } from "../api/auth";
 
 export default function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, clearAuth } = useAuthStore();
   const cartCount = useCartStore((state) => state.cartCount || 0);
   const wishlistCount = useWishlistStore((state) => state.wishlistCount || 0);
   const setDrawerOpen = useCartStore((state) => state.setDrawerOpen);
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearch(params.get("q") || "");
+  }, [location.search]);
+
+  const goToSearch = () => {
+    const q = search.trim();
+
+    navigate({
+      pathname: "/products",
+      search: q ? `?q=${encodeURIComponent(q)}` : "",
+    });
+  };
 
   const handleLogout = async () => {
     try {
@@ -26,8 +41,7 @@ export default function Navbar() {
 
   const handleSearch = (event: FormEvent) => {
     event.preventDefault();
-    const q = search.trim();
-    navigate(q ? `/products?q=${encodeURIComponent(q)}` : "/products");
+    goToSearch();
   };
 
   return (
@@ -51,11 +65,6 @@ export default function Navbar() {
               Orders
             </NavLink>
           )}
-          {isAuthenticated && (
-            <NavLink to="/profile" className="transition hover:text-zinc-900">
-              Profile
-            </NavLink>
-          )}
         </div>
 
         <form onSubmit={handleSearch} className="hidden min-w-56 items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 md:flex">
@@ -70,7 +79,7 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate(search.trim() ? `/products?q=${encodeURIComponent(search.trim())}` : "/products")}
+            onClick={goToSearch}
             className="rounded-full p-2 text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900 md:hidden"
             aria-label="Search products"
           >

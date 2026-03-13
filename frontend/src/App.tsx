@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { bootstrapAuthSession } from "./api/client";
 import { useAuthStore } from "./store/useAuthStore";
 import { useWishlistStore } from "./store/useWishlistStore";
+import ToastViewport from "./components/ToastViewport";
 
 function App() {
   const fetchCart = useCartStore((state) => state.fetchCart);
@@ -43,7 +44,12 @@ function App() {
     clearWishlist();
   }, [clearWishlist, hydrateWishlist, isAuthenticated, userId]);
 
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <ToastViewport />
+    </>
+  );
 }
 
 export default App;

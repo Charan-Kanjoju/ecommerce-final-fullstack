@@ -72,16 +72,32 @@ export const updateCartItem = async (
 
     const { itemId, quantity } = req.body
 
-    if (!itemId || !quantity || Number(quantity) <= 0) {
+    const parsedQuantity = Number(quantity)
+
+    if (!itemId) {
       return res.status(400).json({
-        message: "Valid itemId and quantity are required"
+        message: "Valid itemId is required"
+      })
+    }
+
+    if (Number.isNaN(parsedQuantity)) {
+      return res.status(400).json({
+        message: "Valid quantity is required"
+      })
+    }
+
+    if (parsedQuantity <= 0) {
+      await removeCartItemService(req.userId!, itemId)
+
+      return res.json({
+        message: "Item removed"
       })
     }
 
     const item = await updateCartItemService(
       req.userId!,
       itemId,
-      Number(quantity)
+      parsedQuantity
     )
 
     res.json(item)

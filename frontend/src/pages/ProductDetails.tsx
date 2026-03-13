@@ -86,6 +86,11 @@ export default function ProductDetails() {
             <button
               disabled={isAdding || product.stock <= 0}
               onClick={async () => {
+                if (!isAuthenticated) {
+                  navigate("/login");
+                  return;
+                }
+
                 setIsAdding(true);
                 try {
                   await addToCart(product.id, quantity);

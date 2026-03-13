@@ -64,10 +64,7 @@ export default function Cart() {
                         <p className="text-sm text-zinc-500">${product.price.toFixed(2)}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => updateCartItem(item.id, Math.max(1, item.quantity - 1))}
-                          className="rounded-full border border-zinc-300 px-2"
-                        >
+                        <button onClick={() => updateCartItem(item.id, item.quantity - 1)} className="rounded-full border border-zinc-300 px-2">
                           -
                         </button>
                         <span className="text-sm">{item.quantity}</span>

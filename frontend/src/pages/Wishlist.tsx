@@ -106,6 +106,7 @@ export default function Wishlist() {
                               setActiveProductId(product.id);
                               try {
                                 await addToCart(product.id, 1);
+                                removeFromWishlist(product.id);
                                 setDrawerOpen(true);
                               } finally {
                                 setActiveProductId(null);

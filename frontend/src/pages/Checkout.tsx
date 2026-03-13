@@ -5,6 +5,7 @@ import Layout from "../components/Layout";
 import { useCartStore } from "../store/useCartStore";
 import { api } from "../api/client";
 import { fetchProductsByIds } from "../services/product.service";
+import { getApiErrorMessage } from "../lib/api-error";
 
 type CheckoutForm = {
   fullName: string;
@@ -19,6 +20,8 @@ type CheckoutForm = {
   paymentMethod: "COD" | "CARD";
 };
 
+type FieldErrors = Partial<Record<keyof CheckoutForm, string>>;
+
 const initialForm: CheckoutForm = {
   fullName: "",
   addressLine1: "",
@@ -32,10 +35,54 @@ const initialForm: CheckoutForm = {
   paymentMethod: "COD",
 };
 
+const sanitizeForm = (form: CheckoutForm): CheckoutForm => ({
+  ...form,
+  fullName: form.fullName.trim(),
+  addressLine1: form.addressLine1.trim(),
+  addressLine2: form.addressLine2.trim(),
+  city: form.city.trim(),
+  state: form.state.trim(),
+  postalCode: form.postalCode.trim(),
+  country: form.country.trim(),
+  phone: form.phone.trim(),
+});
+
+const validateCheckoutForm = (rawForm: CheckoutForm) => {
+  const form = sanitizeForm(rawForm);
+  const errors: FieldErrors = {};
+
+  if (!form.fullName) errors.fullName = "Full name is required.";
+  else if (form.fullName.length < 2) errors.fullName = "Full name must be at least 2 characters.";
+
+  if (!form.addressLine1) errors.addressLine1 = "Address line 1 is required.";
+  if (!form.city) errors.city = "City is required.";
+  if (!form.state) errors.state = "State is required.";
+  if (!form.country) errors.country = "Country is required.";
+
+  if (!form.postalCode) {
+    errors.postalCode = "Postal code is required.";
+  } else if (!/^[a-zA-Z0-9\s-]{3,12}$/.test(form.postalCode)) {
+    errors.postalCode = "Use 3 to 12 letters, numbers, spaces, or hyphens.";
+  }
+
+  if (!form.phone) {
+    errors.phone = "Phone number is required.";
+  } else if (!/^[0-9+\s()-]{7,20}$/.test(form.phone)) {
+    errors.phone = "Use 7 to 20 digits or phone symbols.";
+  }
+
+  return {
+    form,
+    errors,
+    isValid: Object.keys(errors).length === 0,
+  };
+};
+
 export default function Checkout() {
   const navigate = useNavigate();
   const { items, fetchCart } = useCartStore();
   const [form, setForm] = useState<CheckoutForm>(initialForm);
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [error, setError] = useState<string | null>(null);
 
   const productIds = items.map((item) => item.productId);
@@ -64,34 +111,48 @@ export default function Checkout() {
   const total = subtotal + shippingFee;
 
   const checkoutMutation = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        ...form,
-        paymentMethod: form.paymentMethod,
-      };
-      await api.post("/orders/checkout", payload);
+    mutationFn: async (payload: CheckoutForm) => {
+      await api.post("/orders/checkout", payload, {
+        skipErrorToast: true,
+      } as any);
     },
     onSuccess: async () => {
       await fetchCart();
       navigate("/orders");
     },
+    onError: (mutationError) => {
+      setError(getApiErrorMessage(mutationError, "Failed to place order."));
+    },
   });
+
+  const updateField = <K extends keyof CheckoutForm>(field: K, value: CheckoutForm[K]) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    if (!form.fullName || !form.addressLine1 || !form.city || !form.state || !form.postalCode || !form.country || !form.phone) {
-      setError("Please complete all required fields.");
-      return;
-    }
 
     if (items.length === 0) {
       setError("Your cart is empty.");
       return;
     }
 
+    const validation = validateCheckoutForm(form);
+    setErrors(validation.errors);
+
+    if (!validation.isValid) {
+      setError("Please fix the highlighted fields.");
+      return;
+    }
+
     setError(null);
-    await checkoutMutation.mutateAsync();
+    await checkoutMutation.mutateAsync(validation.form);
   };
 
   if (items.length === 0) {
@@ -119,54 +180,89 @@ export default function Checkout() {
           <div className="rounded-3xl border border-zinc-200 bg-white p-6">
             <h2 className="mb-5 text-lg font-semibold">Address</h2>
             <div className="grid gap-4 md:grid-cols-2">
-              <input
-                className="rounded-xl border border-zinc-200 px-4 py-2.5 md:col-span-2"
-                placeholder="Full name"
-                value={form.fullName}
-                onChange={(event) => setForm((prev) => ({ ...prev, fullName: event.target.value }))}
-              />
-              <input
-                className="rounded-xl border border-zinc-200 px-4 py-2.5 md:col-span-2"
-                placeholder="Address line 1"
-                value={form.addressLine1}
-                onChange={(event) => setForm((prev) => ({ ...prev, addressLine1: event.target.value }))}
-              />
+              <div className="md:col-span-2">
+                <input
+                  className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
+                  placeholder="Full name"
+                  value={form.fullName}
+                  onChange={(event) => updateField("fullName", event.target.value)}
+                  aria-invalid={!!errors.fullName}
+                />
+                {errors.fullName && <p className="mt-1 text-xs text-rose-600">{errors.fullName}</p>}
+              </div>
+
+              <div className="md:col-span-2">
+                <input
+                  className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
+                  placeholder="Address line 1"
+                  value={form.addressLine1}
+                  onChange={(event) => updateField("addressLine1", event.target.value)}
+                  aria-invalid={!!errors.addressLine1}
+                />
+                {errors.addressLine1 && <p className="mt-1 text-xs text-rose-600">{errors.addressLine1}</p>}
+              </div>
+
               <input
                 className="rounded-xl border border-zinc-200 px-4 py-2.5 md:col-span-2"
                 placeholder="Address line 2 (optional)"
                 value={form.addressLine2}
-                onChange={(event) => setForm((prev) => ({ ...prev, addressLine2: event.target.value }))}
+                onChange={(event) => updateField("addressLine2", event.target.value)}
               />
-              <input
-                className="rounded-xl border border-zinc-200 px-4 py-2.5"
-                placeholder="City"
-                value={form.city}
-                onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))}
-              />
-              <input
-                className="rounded-xl border border-zinc-200 px-4 py-2.5"
-                placeholder="State"
-                value={form.state}
-                onChange={(event) => setForm((prev) => ({ ...prev, state: event.target.value }))}
-              />
-              <input
-                className="rounded-xl border border-zinc-200 px-4 py-2.5"
-                placeholder="Postal code"
-                value={form.postalCode}
-                onChange={(event) => setForm((prev) => ({ ...prev, postalCode: event.target.value }))}
-              />
-              <input
-                className="rounded-xl border border-zinc-200 px-4 py-2.5"
-                placeholder="Country"
-                value={form.country}
-                onChange={(event) => setForm((prev) => ({ ...prev, country: event.target.value }))}
-              />
-              <input
-                className="rounded-xl border border-zinc-200 px-4 py-2.5 md:col-span-2"
-                placeholder="Phone"
-                value={form.phone}
-                onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
-              />
+
+              <div>
+                <input
+                  className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
+                  placeholder="City"
+                  value={form.city}
+                  onChange={(event) => updateField("city", event.target.value)}
+                  aria-invalid={!!errors.city}
+                />
+                {errors.city && <p className="mt-1 text-xs text-rose-600">{errors.city}</p>}
+              </div>
+
+              <div>
+                <input
+                  className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
+                  placeholder="State"
+                  value={form.state}
+                  onChange={(event) => updateField("state", event.target.value)}
+                  aria-invalid={!!errors.state}
+                />
+                {errors.state && <p className="mt-1 text-xs text-rose-600">{errors.state}</p>}
+              </div>
+
+              <div>
+                <input
+                  className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
+                  placeholder="Postal code"
+                  value={form.postalCode}
+                  onChange={(event) => updateField("postalCode", event.target.value)}
+                  aria-invalid={!!errors.postalCode}
+                />
+                {errors.postalCode && <p className="mt-1 text-xs text-rose-600">{errors.postalCode}</p>}
+              </div>
+
+              <div>
+                <input
+                  className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
+                  placeholder="Country"
+                  value={form.country}
+                  onChange={(event) => updateField("country", event.target.value)}
+                  aria-invalid={!!errors.country}
+                />
+                {errors.country && <p className="mt-1 text-xs text-rose-600">{errors.country}</p>}
+              </div>
+
+              <div className="md:col-span-2">
+                <input
+                  className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
+                  placeholder="Phone"
+                  value={form.phone}
+                  onChange={(event) => updateField("phone", event.target.value)}
+                  aria-invalid={!!errors.phone}
+                />
+                {errors.phone && <p className="mt-1 text-xs text-rose-600">{errors.phone}</p>}
+              </div>
             </div>
           </div>
 
@@ -179,7 +275,7 @@ export default function Checkout() {
                   type="radio"
                   name="shipping"
                   checked={form.shippingMethod === "STANDARD"}
-                  onChange={() => setForm((prev) => ({ ...prev, shippingMethod: "STANDARD" }))}
+                  onChange={() => updateField("shippingMethod", "STANDARD")}
                 />
               </label>
               <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-zinc-200 p-4">
@@ -188,7 +284,7 @@ export default function Checkout() {
                   type="radio"
                   name="shipping"
                   checked={form.shippingMethod === "EXPRESS"}
-                  onChange={() => setForm((prev) => ({ ...prev, shippingMethod: "EXPRESS" }))}
+                  onChange={() => updateField("shippingMethod", "EXPRESS")}
                 />
               </label>
             </div>
@@ -203,7 +299,7 @@ export default function Checkout() {
                   type="radio"
                   name="payment"
                   checked={form.paymentMethod === "COD"}
-                  onChange={() => setForm((prev) => ({ ...prev, paymentMethod: "COD" }))}
+                  onChange={() => updateField("paymentMethod", "COD")}
                 />
               </label>
               <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-zinc-200 p-4">
@@ -212,7 +308,7 @@ export default function Checkout() {
                   type="radio"
                   name="payment"
                   checked={form.paymentMethod === "CARD"}
-                  onChange={() => setForm((prev) => ({ ...prev, paymentMethod: "CARD" }))}
+                  onChange={() => updateField("paymentMethod", "CARD")}
                 />
               </label>
             </div>
@@ -254,7 +350,7 @@ export default function Checkout() {
             <span>${total.toFixed(2)}</span>
           </div>
 
-          {error && <p className="mt-4 text-sm text-zinc-700">{error}</p>}
+          {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
 
           <button
             type="submit"

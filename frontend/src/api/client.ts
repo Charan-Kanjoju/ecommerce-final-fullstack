@@ -1,14 +1,16 @@
 import axios from "axios";
+import { getApiErrorMessage } from "../lib/api-error";
 import { useAuthStore } from "../store/useAuthStore";
+import { useToastStore } from "../store/useToastStore";
 
 export const api = axios.create({
   baseURL: "https://ecommerce-final-fullstack.onrender.com/api",
- withCredentials: true,
+  withCredentials: true,
 });
 
 const refreshClient = axios.create({
   baseURL: "https://ecommerce-final-fullstack.onrender.com/api",
-withCredentials: true,
+  withCredentials: true,
 });
 
 let refreshPromise: Promise<string | null> | null = null;
@@ -51,6 +53,7 @@ api.interceptors.response.use(
     const originalRequest = error.config as any;
 
     if (!error.response || !originalRequest) {
+      useToastStore.getState().showToast(getApiErrorMessage(error));
       return Promise.reject(error);
     }
 
@@ -70,6 +73,10 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${nextToken}`;
         return api(originalRequest);
       }
+    }
+
+    if (!originalRequest.skipErrorToast) {
+      useToastStore.getState().showToast(getApiErrorMessage(error));
     }
 
     return Promise.reject(error);

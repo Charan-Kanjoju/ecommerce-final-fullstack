@@ -82,10 +82,7 @@ export const CartDrawer = () => {
                     <p className="line-clamp-1 text-sm font-medium text-zinc-900">{product.name}</p>
                     <p className="text-sm text-zinc-500">${product.price.toFixed(2)}</p>
                     <div className="mt-2 flex items-center gap-2">
-                      <button
-                        onClick={() => updateCartItem(item.id, Math.max(1, item.quantity - 1))}
-                        className="rounded-full border border-zinc-300 p-1"
-                      >
+                      <button onClick={() => updateCartItem(item.id, item.quantity - 1)} className="rounded-full border border-zinc-300 p-1">
                         <Minus size={12} />
                       </button>
                       <span className="text-sm">{item.quantity}</span>

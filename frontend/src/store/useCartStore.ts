@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { api } from "../api/client";
+import { getApiErrorMessage } from "../lib/api-error";
 
 type CartItem = {
   id: string;
@@ -74,6 +75,11 @@ export const useCartStore = create<CartState>((set) => ({
   },
 
   updateCartItem: async (itemId, quantity) => {
+    if (quantity <= 0) {
+      await useCartStore.getState().removeFromCart(itemId);
+      return;
+    }
+
     const previousState = useCartStore.getState();
     const optimisticItems = previousState.items
       .map((item) => (item.id === itemId ? { ...item, quantity } : item))
@@ -87,9 +93,9 @@ export const useCartStore = create<CartState>((set) => ({
     try {
       await api.put("/cart/update", { itemId, quantity });
       await previousState.fetchCart();
-    } catch {
+    } catch (error) {
       set({ items: previousState.items, cartCount: previousState.cartCount });
-      throw new Error("Failed to update cart");
+      throw new Error(getApiErrorMessage(error, "Failed to update cart"));
     }
   },
 
@@ -107,9 +113,9 @@ export const useCartStore = create<CartState>((set) => ({
         data: { itemId: id },
       });
       await previousState.fetchCart();
-    } catch {
+    } catch (error) {
       set({ items: previousState.items, cartCount: previousState.cartCount });
-      throw new Error("Failed to remove item");
+      throw new Error(getApiErrorMessage(error, "Failed to remove item"));
     }
   },
 }));

@@ -2,7 +2,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { InfiniteData } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import { useDebounce } from "../hooks/useDebounce";
 import { fetchProducts, type Product, type ProductsResponse } from "../services/product.service";
@@ -10,20 +10,23 @@ import { ProductGridCard } from "../features/products/components/ProductGridCard
 import { ProductQuickPreview } from "../features/products/components/ProductQuickPreview";
 import { ProductGridSkeleton } from "../features/products/components/ProductGridSkeleton";
 import { useCartStore } from "../store/useCartStore";
+import { useAuthStore } from "../store/useAuthStore";
 import { DB_CATEGORY_SLUGS, formatCategoryLabel } from "../utils/categories";
 
 const ALL_CATEGORY = "All";
 
 export default function Products() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const addToCart = useCartStore((state) => state.addToCart);
   const setDrawerOpen = useCartStore((state) => state.setDrawerOpen);
 
-  const initialCategory = searchParams.get("category") || ALL_CATEGORY;
-  const initialQuery = searchParams.get("q") || "";
-  const [searchTerm, setSearchTerm] = useState(initialQuery);
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const categoryFromUrl = searchParams.get("category") || ALL_CATEGORY;
+  const queryFromUrl = searchParams.get("q") || "";
+  const [searchTerm, setSearchTerm] = useState(queryFromUrl);
+  const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl);
   const [sortBy, setSortBy] = useState<"newest" | "price_asc" | "price_desc">("newest");
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(2000);
@@ -74,14 +77,14 @@ export default function Products() {
   const products = data?.pages.flatMap((page) => page.products ?? []) ?? [];
 
   useEffect(() => {
-    const nextCategory = searchParams.get("category") || ALL_CATEGORY;
-    const nextQuery = searchParams.get("q") || "";
-    setSelectedCategory(nextCategory);
-    setSearchTerm(nextQuery);
-  }, [searchParams]);
+    setSelectedCategory(categoryFromUrl);
+  }, [categoryFromUrl]);
+
+  useEffect(() => {
+    setSearchTerm(queryFromUrl);
+  }, [queryFromUrl]);
 
   const updateCategory = (category: string) => {
-    setSelectedCategory(category);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       if (category === ALL_CATEGORY) {
@@ -94,16 +97,23 @@ export default function Products() {
   };
 
   useEffect(() => {
+    const nextQuery = debouncedSearch.trim();
+    const currentQuery = searchParams.get("q") || "";
+
+    if (nextQuery === currentQuery) {
+      return;
+    }
+
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
-      if (debouncedSearch.trim()) {
-        next.set("q", debouncedSearch.trim());
+      if (nextQuery) {
+        next.set("q", nextQuery);
       } else {
         next.delete("q");
       }
       return next;
     });
-  }, [debouncedSearch, setSearchParams]);
+  }, [debouncedSearch, searchParams, setSearchParams]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -240,6 +250,12 @@ export default function Products() {
         product={previewProduct}
         onClose={() => setPreviewProduct(null)}
         onAddToCart={async (productId) => {
+          if (!isAuthenticated) {
+            setPreviewProduct(null);
+            navigate("/login");
+            return;
+          }
+
           await addToCart(productId, 1);
           setDrawerOpen(true);
           setPreviewProduct(null);

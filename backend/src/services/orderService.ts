@@ -1,6 +1,18 @@
 import { prisma } from "../lib/prisma";
 
 export const checkoutService = async (userId: string, shipping: any) => {
+  const cleanedShipping = {
+    fullName: String(shipping?.fullName ?? "").trim(),
+    addressLine1: String(shipping?.addressLine1 ?? "").trim(),
+    addressLine2: String(shipping?.addressLine2 ?? "").trim(),
+    city: String(shipping?.city ?? "").trim(),
+    state: String(shipping?.state ?? "").trim(),
+    postalCode: String(shipping?.postalCode ?? "").trim(),
+    country: String(shipping?.country ?? "").trim(),
+    phone: String(shipping?.phone ?? "").trim(),
+    paymentMethod: String(shipping?.paymentMethod ?? "COD").trim() || "COD",
+  };
+
   const requiredFields = [
     "fullName",
     "addressLine1",
@@ -12,9 +24,21 @@ export const checkoutService = async (userId: string, shipping: any) => {
   ];
 
   for (const field of requiredFields) {
-    if (!shipping?.[field]) {
+    if (!cleanedShipping[field as keyof typeof cleanedShipping]) {
       throw new Error(`Missing required field: ${field}`);
     }
+  }
+
+  if (!/^[a-zA-Z0-9\s-]{3,12}$/.test(cleanedShipping.postalCode)) {
+    throw new Error("Postal code must be 3 to 12 characters and contain only letters, numbers, spaces, or hyphens");
+  }
+
+  if (!/^[0-9+\s()-]{7,20}$/.test(cleanedShipping.phone)) {
+    throw new Error("Phone number must be 7 to 20 characters and contain only digits or standard phone symbols");
+  }
+
+  if (!["COD", "CARD"].includes(cleanedShipping.paymentMethod)) {
+    throw new Error("Invalid payment method");
   }
 
   const cart = await prisma.cart.findUnique({
@@ -51,16 +75,16 @@ export const checkoutService = async (userId: string, shipping: any) => {
       userId,
       total,
 
-      fullName: shipping.fullName,
-      addressLine1: shipping.addressLine1,
-      addressLine2: shipping.addressLine2,
-      city: shipping.city,
-      state: shipping.state,
-      postalCode: shipping.postalCode,
-      country: shipping.country,
-      phone: shipping.phone,
+      fullName: cleanedShipping.fullName,
+      addressLine1: cleanedShipping.addressLine1,
+      addressLine2: cleanedShipping.addressLine2 || null,
+      city: cleanedShipping.city,
+      state: cleanedShipping.state,
+      postalCode: cleanedShipping.postalCode,
+      country: cleanedShipping.country,
+      phone: cleanedShipping.phone,
 
-      paymentMethod: shipping.paymentMethod || "COD",
+      paymentMethod: cleanedShipping.paymentMethod,
 
       items: {
         create: orderItemsData,
