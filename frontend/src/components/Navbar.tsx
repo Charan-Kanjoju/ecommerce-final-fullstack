@@ -1,15 +1,17 @@
 ﻿import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { LogIn, LogOut, Package, Search, ShoppingBag, User } from "lucide-react";
+import { Heart, LogIn, LogOut, Package, Search, ShoppingBag, User } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useCartStore } from "../store/useCartStore";
+import { useWishlistStore } from "../store/useWishlistStore";
 import { logoutUser } from "../api/auth";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const { isAuthenticated, clearAuth } = useAuthStore();
   const cartCount = useCartStore((state) => state.cartCount || 0);
+  const wishlistCount = useWishlistStore((state) => state.wishlistCount || 0);
   const setDrawerOpen = useCartStore((state) => state.setDrawerOpen);
   const [search, setSearch] = useState("");
 
@@ -39,6 +41,11 @@ export default function Navbar() {
           <NavLink to="/products" className="transition hover:text-zinc-900">
             New Arrivals
           </NavLink>
+          {isAuthenticated && (
+            <NavLink to="/wishlist" className="transition hover:text-zinc-900">
+              Wishlist
+            </NavLink>
+          )}
           {isAuthenticated && (
             <NavLink to="/orders" className="transition hover:text-zinc-900">
               Orders
@@ -76,13 +83,32 @@ export default function Navbar() {
                 navigate("/login");
                 return;
               }
+              navigate("/wishlist");
+            }}
+            className="relative rounded-full p-2 text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900"
+            aria-label="Open wishlist"
+          >
+            <Heart size={18} />
+            {wishlistCount > 0 && (
+              <span className="absolute -right-1 -top-1 rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                {wishlistCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => {
+              if (!isAuthenticated) {
+                navigate("/login");
+                return;
+              }
               setDrawerOpen(true);
             }}
             className="relative rounded-full p-2 text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900"
             aria-label="Open cart drawer"
           >
             <ShoppingBag size={18} />
-            {cartCount > 0 && (
+            {isAuthenticated && cartCount > 0 && (
               <span className="absolute -right-1 -top-1 rounded-full bg-zinc-900 px-1.5 py-0.5 text-[10px] font-medium text-white">
                 {cartCount}
               </span>
@@ -123,6 +149,12 @@ export default function Navbar() {
           <Package size={14} />
           Shop
         </NavLink>
+        {isAuthenticated && (
+          <NavLink to="/wishlist" className="inline-flex items-center gap-1">
+            <Heart size={14} />
+            Wishlist
+          </NavLink>
+        )}
       </div>
     </nav>
   );

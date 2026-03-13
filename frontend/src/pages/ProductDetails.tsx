@@ -1,20 +1,23 @@
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { Heart } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Layout from "../components/Layout";
+import { useAuthStore } from "../store/useAuthStore";
 import { useCartStore } from "../store/useCartStore";
+import { useWishlistStore } from "../store/useWishlistStore";
 import { fetchProductById, fetchProducts } from "../services/product.service";
 
-
-
 export default function ProductDetails() {
+  const navigate = useNavigate();
   const { id = "" } = useParams();
   const addToCart = useCartStore((state) => state.addToCart);
   const setDrawerOpen = useCartStore((state) => state.setDrawerOpen);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
+  const isWishlisted = useWishlistStore((state) => state.isWishlisted(id));
 
   const [quantity, setQuantity] = useState(1);
-
   const [isAdding, setIsAdding] = useState(false);
 
   const { data: product, isLoading } = useQuery({
@@ -66,9 +69,6 @@ export default function ProductDetails() {
           <p className="text-2xl font-semibold text-zinc-900">${product.price.toFixed(2)}</p>
           <p className="leading-relaxed text-zinc-600">{product.description}</p>
 
-
-          
-
           <div className="flex items-center gap-3">
             <button
               className="rounded-full border border-zinc-300 px-3 py-1.5"
@@ -82,21 +82,41 @@ export default function ProductDetails() {
             </button>
           </div>
 
-          <button
-            disabled={isAdding || product.stock <= 0}
-            onClick={async () => {
-              setIsAdding(true);
-              try {
-                await addToCart(product.id, quantity);
-                setDrawerOpen(true);
-              } finally {
-                setIsAdding(false);
-              }
-            }}
-            className="w-full rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition hover:scale-[1.01] hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isAdding ? "Adding..." : "Add To Cart"}
-          </button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              disabled={isAdding || product.stock <= 0}
+              onClick={async () => {
+                setIsAdding(true);
+                try {
+                  await addToCart(product.id, quantity);
+                  setDrawerOpen(true);
+                } finally {
+                  setIsAdding(false);
+                }
+              }}
+              className="flex-1 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition hover:scale-[1.01] hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isAdding ? "Adding..." : "Add To Cart"}
+            </button>
+
+            <button
+              onClick={() => {
+                if (!isAuthenticated) {
+                  navigate("/login");
+                  return;
+                }
+                toggleWishlist(product.id);
+              }}
+              className={`inline-flex items-center justify-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition ${
+                isWishlisted
+                  ? "border-rose-200 bg-rose-50 text-rose-600"
+                  : "border-zinc-300 bg-white text-zinc-800 hover:border-zinc-900"
+              }`}
+            >
+              <Heart size={16} className={isWishlisted ? "fill-current" : ""} />
+              {isWishlisted ? "Saved" : "Save to Wishlist"}
+            </button>
+          </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-4">
             <p className="text-sm font-medium text-zinc-900">Reviews</p>

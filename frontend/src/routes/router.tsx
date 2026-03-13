@@ -9,6 +9,7 @@ import Profile from "../pages/Profile";
 import Landing from "../pages/Landing";
 import Checkout from "../pages/Checkout";
 import OrderDetails from "../pages/OrderDetails";
+import Wishlist from "../pages/Wishlist";
 import ProtectedRoute from "../components/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -23,6 +24,14 @@ export const router = createBrowserRouter([
   {
     path: "/products/:id",
     element: <ProductDetails />,
+  },
+  {
+    path: "/wishlist",
+    element: (
+      <ProtectedRoute>
+        <Wishlist />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/cart",

@@ -4,10 +4,15 @@ import { useCartStore } from "./store/useCartStore";
 import { useEffect } from "react";
 import { bootstrapAuthSession } from "./api/client";
 import { useAuthStore } from "./store/useAuthStore";
+import { useWishlistStore } from "./store/useWishlistStore";
 
 function App() {
   const fetchCart = useCartStore((state) => state.fetchCart);
+  const clearCart = useCartStore((state) => state.clearCart);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userId = useAuthStore((state) => state.user?.id ?? null);
+  const hydrateWishlist = useWishlistStore((state) => state.hydrateWishlist);
+  const clearWishlist = useWishlistStore((state) => state.clearWishlist);
 
   useEffect(() => {
     const run = async () => {
@@ -23,8 +28,20 @@ function App() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchCart();
+      return;
     }
-  }, [isAuthenticated, fetchCart]);
+
+    clearCart();
+  }, [clearCart, isAuthenticated, fetchCart]);
+
+  useEffect(() => {
+    if (isAuthenticated && userId) {
+      hydrateWishlist(userId);
+      return;
+    }
+
+    clearWishlist();
+  }, [clearWishlist, hydrateWishlist, isAuthenticated, userId]);
 
   return <RouterProvider router={router} />;
 }

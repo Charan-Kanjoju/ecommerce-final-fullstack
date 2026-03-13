@@ -1,7 +1,9 @@
-import { Eye } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Eye, Heart } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
 import type { Product } from "../../../services/product.service";
+import { useAuthStore } from "../../../store/useAuthStore";
+import { useWishlistStore } from "../../../store/useWishlistStore";
 import { formatCategoryLabel } from "../../../utils/categories";
 
 type ProductGridCardProps = {
@@ -10,7 +12,10 @@ type ProductGridCardProps = {
 };
 
 export const ProductGridCard = ({ product, onQuickPreview }: ProductGridCardProps) => {
-
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isWishlisted = useWishlistStore((state) => state.isWishlisted(product.id));
+  const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
 
   return (
     <article className="group relative overflow-hidden rounded-3xl border border-zinc-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
@@ -23,14 +28,30 @@ export const ProductGridCard = ({ product, onQuickPreview }: ProductGridCardProp
         />
       </Link>
 
-      
-
       <button
         aria-label="Quick preview"
         onClick={() => onQuickPreview(product)}
         className="absolute left-4 top-4 rounded-full border border-white/70 bg-white/90 p-2 text-zinc-700 opacity-0 backdrop-blur transition group-hover:opacity-100"
       >
         <Eye size={16} />
+      </button>
+
+      <button
+        aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+        onClick={() => {
+          if (!isAuthenticated) {
+            navigate("/login");
+            return;
+          }
+          toggleWishlist(product.id);
+        }}
+        className={`absolute right-4 top-4 rounded-full border p-2 backdrop-blur transition ${
+          isWishlisted
+            ? "border-rose-200 bg-rose-50 text-rose-600 opacity-100"
+            : "border-white/70 bg-white/90 text-zinc-700 opacity-0 group-hover:opacity-100"
+        }`}
+      >
+        <Heart size={16} className={isWishlisted ? "fill-current" : ""} />
       </button>
 
       <div className="space-y-2 p-5">

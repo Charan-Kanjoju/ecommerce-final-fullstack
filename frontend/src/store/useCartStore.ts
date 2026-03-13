@@ -16,6 +16,7 @@ interface CartState {
   addToCart: (productId: string, quantity: number) => Promise<void>;
   updateCartItem: (itemId: string, quantity: number) => Promise<void>;
   removeFromCart: (id: string) => Promise<void>;
+  clearCart: () => void;
   setDrawerOpen: (isOpen: boolean) => void;
 }
 
@@ -25,6 +26,7 @@ export const useCartStore = create<CartState>((set) => ({
   isDrawerOpen: false,
 
   setDrawerOpen: (isDrawerOpen) => set({ isDrawerOpen }),
+  clearCart: () => set({ items: [], cartCount: 0, isDrawerOpen: false }),
 
   fetchCart: async () => {
     try {
