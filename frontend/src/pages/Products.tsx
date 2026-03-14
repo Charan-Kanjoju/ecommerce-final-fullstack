@@ -19,6 +19,7 @@ export default function Products() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const isSyncingSearchFromUrlRef = useRef(true);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const addToCart = useCartStore((state) => state.addToCart);
   const setDrawerOpen = useCartStore((state) => state.setDrawerOpen);
@@ -81,6 +82,7 @@ export default function Products() {
   }, [categoryFromUrl]);
 
   useEffect(() => {
+    isSyncingSearchFromUrlRef.current = true;
     setSearchTerm(queryFromUrl);
   }, [queryFromUrl]);
 
@@ -98,7 +100,15 @@ export default function Products() {
 
   useEffect(() => {
     const nextQuery = debouncedSearch.trim();
-    const currentQuery = searchParams.get("q") || "";
+    const currentQuery = queryFromUrl.trim();
+
+    if (isSyncingSearchFromUrlRef.current) {
+      if (nextQuery !== currentQuery) {
+        return;
+      }
+
+      isSyncingSearchFromUrlRef.current = false;
+    }
 
     if (nextQuery === currentQuery) {
       return;
@@ -113,7 +123,7 @@ export default function Products() {
       }
       return next;
     });
-  }, [debouncedSearch, searchParams, setSearchParams]);
+  }, [debouncedSearch, queryFromUrl, setSearchParams]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(

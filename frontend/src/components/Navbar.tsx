@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Heart, LogIn, LogOut, Package, Search, ShoppingBag, User } from "lucide-react";
@@ -15,18 +15,31 @@ export default function Navbar() {
   const wishlistCount = useWishlistStore((state) => state.wishlistCount || 0);
   const setDrawerOpen = useCartStore((state) => state.setDrawerOpen);
   const [search, setSearch] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const currentQuery = new URLSearchParams(location.search).get("q") || "";
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    setSearch(params.get("q") || "");
-  }, [location.search]);
+    setSearch(currentQuery);
+  }, [currentQuery]);
 
-  const goToSearch = () => {
-    const q = search.trim();
+  const goToSearch = (rawValue = searchInputRef.current?.value ?? search) => {
+    const q = rawValue.trim();
+    const nextSearchParams = new URLSearchParams();
+
+    if (q) {
+      nextSearchParams.set("q", q);
+    }
+
+    if (location.pathname === "/products") {
+      const currentCategory = new URLSearchParams(location.search).get("category");
+      if (currentCategory) {
+        nextSearchParams.set("category", currentCategory);
+      }
+    }
 
     navigate({
       pathname: "/products",
-      search: q ? `?q=${encodeURIComponent(q)}` : "",
+      search: nextSearchParams.toString() ? `?${nextSearchParams.toString()}` : "",
     });
   };
 
@@ -41,7 +54,8 @@ export default function Navbar() {
 
   const handleSearch = (event: FormEvent) => {
     event.preventDefault();
-    goToSearch();
+    const formData = new FormData(event.currentTarget as HTMLFormElement);
+    goToSearch(String(formData.get("global-search") || ""));
   };
 
   return (
@@ -70,6 +84,8 @@ export default function Navbar() {
         <form onSubmit={handleSearch} className="hidden min-w-56 items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 md:flex">
           <Search size={15} className="text-zinc-400" />
           <input
+            ref={searchInputRef}
+            name="global-search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search products"
@@ -79,7 +95,7 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={goToSearch}
+            onClick={() => goToSearch()}
             className="rounded-full p-2 text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900 md:hidden"
             aria-label="Search products"
           >
