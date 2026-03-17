@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Layout from "../components/Layout";
@@ -19,8 +20,6 @@ type CheckoutForm = {
   shippingMethod: "STANDARD" | "EXPRESS";
   paymentMethod: "COD" | "CARD";
 };
-
-type FieldErrors = Partial<Record<keyof CheckoutForm, string>>;
 
 const initialForm: CheckoutForm = {
   fullName: "",
@@ -47,43 +46,19 @@ const sanitizeForm = (form: CheckoutForm): CheckoutForm => ({
   phone: form.phone.trim(),
 });
 
-const validateCheckoutForm = (rawForm: CheckoutForm) => {
-  const form = sanitizeForm(rawForm);
-  const errors: FieldErrors = {};
-
-  if (!form.fullName) errors.fullName = "Full name is required.";
-  else if (form.fullName.length < 2) errors.fullName = "Full name must be at least 2 characters.";
-
-  if (!form.addressLine1) errors.addressLine1 = "Address line 1 is required.";
-  if (!form.city) errors.city = "City is required.";
-  if (!form.state) errors.state = "State is required.";
-  if (!form.country) errors.country = "Country is required.";
-
-  if (!form.postalCode) {
-    errors.postalCode = "Postal code is required.";
-  } else if (!/^[a-zA-Z0-9\s-]{3,12}$/.test(form.postalCode)) {
-    errors.postalCode = "Use 3 to 12 letters, numbers, spaces, or hyphens.";
-  }
-
-  if (!form.phone) {
-    errors.phone = "Phone number is required.";
-  } else if (!/^[0-9+\s()-]{7,20}$/.test(form.phone)) {
-    errors.phone = "Use 7 to 20 digits or phone symbols.";
-  }
-
-  return {
-    form,
-    errors,
-    isValid: Object.keys(errors).length === 0,
-  };
-};
-
 export default function Checkout() {
   const navigate = useNavigate();
   const { items, fetchCart } = useCartStore();
-  const [form, setForm] = useState<CheckoutForm>(initialForm);
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<CheckoutForm>({
+    defaultValues: initialForm,
+    mode: "onBlur",
+  });
 
   const productIds = items.map((item) => item.productId);
 
@@ -101,13 +76,14 @@ export default function Checkout() {
     return map;
   }, [products]);
 
+  const shippingMethod = watch("shippingMethod");
   const subtotal = items.reduce((sum, item) => {
     const product = productMap[item.productId];
     if (!product) return sum;
     return sum + product.price * item.quantity;
   }, 0);
 
-  const shippingFee = form.shippingMethod === "EXPRESS" ? 12 : 0;
+  const shippingFee = shippingMethod === "EXPRESS" ? 12 : 0;
   const total = subtotal + shippingFee;
 
   const checkoutMutation = useMutation({
@@ -121,38 +97,18 @@ export default function Checkout() {
       navigate("/orders");
     },
     onError: (mutationError) => {
-      setError(getApiErrorMessage(mutationError, "Failed to place order."));
+      setFormError(getApiErrorMessage(mutationError, "Failed to place order."));
     },
   });
 
-  const updateField = <K extends keyof CheckoutForm>(field: K, value: CheckoutForm[K]) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => {
-      if (!prev[field]) return prev;
-      const next = { ...prev };
-      delete next[field];
-      return next;
-    });
-  };
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
+  const onSubmit = async (data: CheckoutForm) => {
     if (items.length === 0) {
-      setError("Your cart is empty.");
+      setFormError("Your cart is empty.");
       return;
     }
 
-    const validation = validateCheckoutForm(form);
-    setErrors(validation.errors);
-
-    if (!validation.isValid) {
-      setError("Please fix the highlighted fields.");
-      return;
-    }
-
-    setError(null);
-    await checkoutMutation.mutateAsync(validation.form);
+    setFormError(null);
+    await checkoutMutation.mutateAsync(sanitizeForm(data));
   };
 
   if (items.length === 0) {
@@ -175,7 +131,7 @@ export default function Checkout() {
   return (
     <Layout>
       <h1 className="mb-8 text-3xl font-semibold tracking-tight">Checkout</h1>
-      <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_360px]">
+      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-8 lg:grid-cols-[1fr_360px]" noValidate>
         <section className="space-y-6">
           <div className="rounded-3xl border border-zinc-200 bg-white p-6">
             <h2 className="mb-5 text-lg font-semibold">Address</h2>
@@ -184,84 +140,112 @@ export default function Checkout() {
                 <input
                   className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
                   placeholder="Full name"
-                  value={form.fullName}
-                  onChange={(event) => updateField("fullName", event.target.value)}
-                  aria-invalid={!!errors.fullName}
+                  aria-invalid={errors.fullName ? "true" : "false"}
+                  {...register("fullName", {
+                    required: "Full name is required.",
+                    validate: (value) =>
+                      value.trim().length >= 2 || "Full name must be at least 2 characters.",
+                  })}
                 />
-                {errors.fullName && <p className="mt-1 text-xs text-rose-600">{errors.fullName}</p>}
+                {errors.fullName && <p className="mt-1 text-xs text-rose-600">{errors.fullName.message}</p>}
               </div>
 
               <div className="md:col-span-2">
                 <input
                   className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
                   placeholder="Address line 1"
-                  value={form.addressLine1}
-                  onChange={(event) => updateField("addressLine1", event.target.value)}
-                  aria-invalid={!!errors.addressLine1}
+                  aria-invalid={errors.addressLine1 ? "true" : "false"}
+                  {...register("addressLine1", {
+                    required: "Address line 1 is required.",
+                    validate: (value) => value.trim().length > 0 || "Address line 1 is required.",
+                  })}
                 />
-                {errors.addressLine1 && <p className="mt-1 text-xs text-rose-600">{errors.addressLine1}</p>}
+                {errors.addressLine1 && <p className="mt-1 text-xs text-rose-600">{errors.addressLine1.message}</p>}
               </div>
 
               <input
                 className="rounded-xl border border-zinc-200 px-4 py-2.5 md:col-span-2"
                 placeholder="Address line 2 (optional)"
-                value={form.addressLine2}
-                onChange={(event) => updateField("addressLine2", event.target.value)}
+                {...register("addressLine2")}
               />
 
               <div>
                 <input
                   className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
                   placeholder="City"
-                  value={form.city}
-                  onChange={(event) => updateField("city", event.target.value)}
-                  aria-invalid={!!errors.city}
+                  aria-invalid={errors.city ? "true" : "false"}
+                  {...register("city", {
+                    required: "City is required.",
+                    validate: (value) => value.trim().length > 0 || "City is required.",
+                  })}
                 />
-                {errors.city && <p className="mt-1 text-xs text-rose-600">{errors.city}</p>}
+                {errors.city && <p className="mt-1 text-xs text-rose-600">{errors.city.message}</p>}
               </div>
 
               <div>
                 <input
                   className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
                   placeholder="State"
-                  value={form.state}
-                  onChange={(event) => updateField("state", event.target.value)}
-                  aria-invalid={!!errors.state}
+                  aria-invalid={errors.state ? "true" : "false"}
+                  {...register("state", {
+                    required: "State is required.",
+                    validate: (value) => value.trim().length > 0 || "State is required.",
+                  })}
                 />
-                {errors.state && <p className="mt-1 text-xs text-rose-600">{errors.state}</p>}
+                {errors.state && <p className="mt-1 text-xs text-rose-600">{errors.state.message}</p>}
               </div>
 
               <div>
                 <input
                   className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
                   placeholder="Postal code"
-                  value={form.postalCode}
-                  onChange={(event) => updateField("postalCode", event.target.value)}
-                  aria-invalid={!!errors.postalCode}
+                  aria-invalid={errors.postalCode ? "true" : "false"}
+                  {...register("postalCode", {
+                    required: "Postal code is required.",
+                    validate: (value) => {
+                      const trimmedValue = value.trim();
+                      if (!trimmedValue) return "Postal code is required.";
+                      return (
+                        /^[0-9]{3,12}$/.test(trimmedValue) ||
+                        "Use 3 to 12 digits."
+                      );
+                    },
+                  })}
                 />
-                {errors.postalCode && <p className="mt-1 text-xs text-rose-600">{errors.postalCode}</p>}
+                {errors.postalCode && <p className="mt-1 text-xs text-rose-600">{errors.postalCode.message}</p>}
               </div>
 
               <div>
                 <input
                   className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
                   placeholder="Country"
-                  value={form.country}
-                  onChange={(event) => updateField("country", event.target.value)}
-                  aria-invalid={!!errors.country}
+                  aria-invalid={errors.country ? "true" : "false"}
+                  {...register("country", {
+                    required: "Country is required.",
+                    validate: (value) => value.trim().length > 0 || "Country is required.",
+                  })}
                 />
-                {errors.country && <p className="mt-1 text-xs text-rose-600">{errors.country}</p>}
+                {errors.country && <p className="mt-1 text-xs text-rose-600">{errors.country.message}</p>}
               </div>
 
               <div className="md:col-span-2">
                 <input
                   className="w-full rounded-xl border border-zinc-200 px-4 py-2.5"
                   placeholder="Phone"
-                  value={form.phone}
-                  onChange={(event) => updateField("phone", event.target.value)}
-                  aria-invalid={!!errors.phone}
+                  aria-invalid={errors.phone ? "true" : "false"}
+                  {...register("phone", {
+                    required: "Phone number is required.",
+                    validate: (value) => {
+                      const trimmedValue = value.trim();
+                      if (!trimmedValue) return "Phone number is required.";
+                      return (
+                        /^[0-9]{10}$/.test(trimmedValue) ||
+                        "Use 10 digits for the phone number."
+                      );
+                    },
+                  })}
                 />
-                {errors.phone && <p className="mt-1 text-xs text-rose-600">{errors.phone}</p>}
+                {errors.phone && <p className="mt-1 text-xs text-rose-600">{errors.phone.message}</p>}
               </div>
             </div>
           </div>
@@ -271,21 +255,11 @@ export default function Checkout() {
             <div className="space-y-3 text-sm">
               <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-zinc-200 p-4">
                 <span>Standard (3-5 days)</span>
-                <input
-                  type="radio"
-                  name="shipping"
-                  checked={form.shippingMethod === "STANDARD"}
-                  onChange={() => updateField("shippingMethod", "STANDARD")}
-                />
+                <input type="radio" value="STANDARD" {...register("shippingMethod")} />
               </label>
               <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-zinc-200 p-4">
                 <span>Express (1-2 days)</span>
-                <input
-                  type="radio"
-                  name="shipping"
-                  checked={form.shippingMethod === "EXPRESS"}
-                  onChange={() => updateField("shippingMethod", "EXPRESS")}
-                />
+                <input type="radio" value="EXPRESS" {...register("shippingMethod")} />
               </label>
             </div>
           </div>
@@ -295,21 +269,11 @@ export default function Checkout() {
             <div className="space-y-3 text-sm">
               <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-zinc-200 p-4">
                 <span>Cash on delivery</span>
-                <input
-                  type="radio"
-                  name="payment"
-                  checked={form.paymentMethod === "COD"}
-                  onChange={() => updateField("paymentMethod", "COD")}
-                />
+                <input type="radio" value="COD" {...register("paymentMethod")} />
               </label>
               <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-zinc-200 p-4">
                 <span>Credit/Debit card</span>
-                <input
-                  type="radio"
-                  name="payment"
-                  checked={form.paymentMethod === "CARD"}
-                  onChange={() => updateField("paymentMethod", "CARD")}
-                />
+                <input type="radio" value="CARD" {...register("paymentMethod")} />
               </label>
             </div>
           </div>
@@ -350,14 +314,14 @@ export default function Checkout() {
             <span>${total.toFixed(2)}</span>
           </div>
 
-          {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
+          {formError && <p className="mt-4 text-sm text-rose-600">{formError}</p>}
 
           <button
             type="submit"
-            disabled={checkoutMutation.isPending}
+            disabled={checkoutMutation.isPending || isSubmitting}
             className="mt-6 w-full rounded-full bg-zinc-900 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {checkoutMutation.isPending ? "Placing order..." : "Place order"}
+            {checkoutMutation.isPending || isSubmitting ? "Placing order..." : "Place order"}
           </button>
         </aside>
       </form>

@@ -1,30 +1,43 @@
-﻿import { useState } from "react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import { loginUser } from "../api/auth";
 import { useAuthStore } from "../store/useAuthStore";
 
+type LoginFormValues = {
+  email: string;
+  password: string;
+};
+
 export default function Login() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+    mode: "onBlur",
+  });
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setLoading(true);
+  const onSubmit = async (data: LoginFormValues) => {
     setError("");
 
     try {
-      const response = await loginUser({ email, password });
+      const response = await loginUser({
+        email: data.email.trim(),
+        password: data.password,
+      });
       setAuth({ accessToken: response.accessToken, user: response.user });
       navigate("/products");
     } catch {
       setError("Invalid email or password.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -41,27 +54,48 @@ export default function Login() {
 
         <section className="p-8 md:p-10">
           <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">Sign in</h2>
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <input
-              type="email"
-              placeholder="Email"
-              className="w-full rounded-xl border border-zinc-200 px-4 py-3"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              className="w-full rounded-xl border border-zinc-200 px-4 py-3"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
+            <div>
+              <input
+                type="email"
+                placeholder="Email"
+                className="w-full rounded-xl border border-zinc-200 px-4 py-3"
+                aria-invalid={errors.email ? "true" : "false"}
+                {...register("email", {
+                  required: "Email is required.",
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: "Enter a valid email address.",
+                  },
+                })}
+              />
+              {errors.email && <p className="mt-1 text-sm text-rose-600">{errors.email.message}</p>}
+            </div>
+
+            <div>
+              <input
+                type="password"
+                placeholder="Password"
+                className="w-full rounded-xl border border-zinc-200 px-4 py-3"
+                aria-invalid={errors.password ? "true" : "false"}
+                {...register("password", {
+                  required: "Password is required.",
+                  minLength: {
+                    value: 6,
+                    message: "Password must be at least 6 characters.",
+                  },
+                })}
+              />
+              {errors.password && <p className="mt-1 text-sm text-rose-600">{errors.password.message}</p>}
+            </div>
+
             {error && <p className="text-sm text-zinc-700">{error}</p>}
+
             <button
-              disabled={loading}
+              disabled={isSubmitting}
               className="w-full rounded-full bg-zinc-900 py-3 text-sm font-medium text-white disabled:opacity-60"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {isSubmitting ? "Signing in..." : "Sign in"}
             </button>
           </form>
           <p className="mt-5 text-sm text-zinc-600">

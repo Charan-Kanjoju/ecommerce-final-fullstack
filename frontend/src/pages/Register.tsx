@@ -1,31 +1,46 @@
-﻿import { useState } from "react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import { registerUser } from "../api/auth";
 import { useAuthStore } from "../store/useAuthStore";
 
+type RegisterFormValues = {
+  name: string;
+  email: string;
+  password: string;
+};
+
 export default function Register() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterFormValues>({
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+    },
+    mode: "onBlur",
+  });
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setLoading(true);
+  const onSubmit = async (data: RegisterFormValues) => {
     setError("");
 
     try {
-      const response = await registerUser({ name, email, password });
+      const response = await registerUser({
+        name: data.name.trim(),
+        email: data.email.trim(),
+        password: data.password,
+      });
       setAuth({ accessToken: response.accessToken, user: response.user });
       navigate("/products");
     } catch {
       setError("Unable to create account.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -42,34 +57,69 @@ export default function Register() {
 
         <section className="p-8 md:p-10">
           <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">Create account</h2>
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <input
-              type="text"
-              placeholder="Full name"
-              className="w-full rounded-xl border border-zinc-200 px-4 py-3"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              className="w-full rounded-xl border border-zinc-200 px-4 py-3"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              className="w-full rounded-xl border border-zinc-200 px-4 py-3"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
+            <div>
+              <input
+                type="text"
+                placeholder="Full name"
+                className="w-full rounded-xl border border-zinc-200 px-4 py-3"
+                aria-invalid={errors.name ? "true" : "false"}
+                {...register("name", {
+                  required: "Full name is required.",
+                  validate: (value) =>
+                    value.trim().length >= 2 || "Full name must be at least 2 characters.",
+                })}
+              />
+              {errors.name && <p className="mt-1 text-sm text-rose-600">{errors.name.message}</p>}
+            </div>
+
+            <div>
+              <input
+                type="email"
+                placeholder="Email"
+                className="w-full rounded-xl border border-zinc-200 px-4 py-3"
+                aria-invalid={errors.email ? "true" : "false"}
+                {...register("email", {
+                  required: "Email is required.",
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: "Enter a valid email address.",
+                  },
+                })}
+              />
+              {errors.email && <p className="mt-1 text-sm text-rose-600">{errors.email.message}</p>}
+            </div>
+
+            <div>
+              <input
+                type="password"
+                placeholder="Password"
+                className="w-full rounded-xl border border-zinc-200 px-4 py-3"
+                aria-invalid={errors.password ? "true" : "false"}
+                {...register("password", {
+                  required: "Password is required.",
+                  minLength: {
+                    value: 6,
+                    message: "Password must be at least 6 characters.",
+                  },
+                  validate: {
+                    hasLetter: (value) =>
+                      /[A-Za-z]/.test(value) || "Password must include at least one letter.",
+                    hasNumber: (value) =>
+                      /\d/.test(value) || "Password must include at least one number.",
+                  },
+                })}
+              />
+              {errors.password && <p className="mt-1 text-sm text-rose-600">{errors.password.message}</p>}
+            </div>
+
             {error && <p className="text-sm text-zinc-700">{error}</p>}
+
             <button
-              disabled={loading}
+              disabled={isSubmitting}
               className="w-full rounded-full bg-zinc-900 py-3 text-sm font-medium text-white disabled:opacity-60"
             >
-              {loading ? "Creating..." : "Create account"}
+              {isSubmitting ? "Creating..." : "Create account"}
             </button>
           </form>
           <p className="mt-5 text-sm text-zinc-600">
