@@ -1,13 +1,9 @@
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { fetchProducts } from "../services/product.service";
+import { useHomepageProducts } from "../hooks/useHomepageProducts";
 import { DB_CATEGORY_SLUGS, formatCategoryLabel } from "../utils/categories";
 
 export default function Categories() {
-  const { data } = useQuery({
-    queryKey: ["homepage-categories"],
-    queryFn: () => fetchProducts({ page: 1, sort: "newest" }),
-  });
+  const { data } = useHomepageProducts();
 
   const categories = Array.from(new Set([...(data?.products.map((product) => product.category) || []), ...DB_CATEGORY_SLUGS])).slice(0, 8);
 

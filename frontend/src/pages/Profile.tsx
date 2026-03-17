@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import Layout from "../components/Layout";
+import { fetchOrders, type Order } from "../services/order.service";
 
 type ProfileData = {
   id: string;
@@ -22,12 +23,9 @@ export default function Profile() {
     },
   });
 
-  const { data: orders = [] } = useQuery<any[]>({
+  const { data: orders = [] } = useQuery<Order[]>({
     queryKey: ["orders"],
-    queryFn: async () => {
-      const res = await api.get("/orders");
-      return res.data;
-    },
+    queryFn: fetchOrders,
   });
 
   const [name, setName] = useState("");
@@ -132,7 +130,7 @@ export default function Profile() {
               <p className="text-sm text-zinc-500">No orders yet.</p>
             ) : (
               <div className="space-y-3">
-                {orders.slice(0, 4).map((order: any) => (
+                {orders.slice(0, 4).map((order) => (
                   <div key={order.id} className="rounded-xl border border-zinc-200 p-4">
                     <p className="text-sm font-medium text-zinc-900">Order for {order.fullName}</p>
                     <p className="text-xs text-zinc-500">{new Date(order.createdAt).toLocaleDateString()}</p>

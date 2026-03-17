@@ -8,12 +8,17 @@ export default function ProtectedRoute({ children }: any) {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    if (isAuthenticated) {
+      setChecking(false);
+      return;
+    }
+
     const run = async () => {
       await bootstrapAuthSession();
       setChecking(false);
     };
     run();
-  }, []);
+  }, [isAuthenticated]);
 
   if (checking) {
     return <div className="p-10 text-center text-sm text-zinc-500">Checking session...</div>;

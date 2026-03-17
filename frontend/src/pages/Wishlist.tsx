@@ -1,11 +1,10 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Heart, ShoppingBag, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import Layout from "../components/Layout";
-import { fetchProductsByIds } from "../services/product.service";
 import { useCartStore } from "../store/useCartStore";
 import { useWishlistStore } from "../store/useWishlistStore";
+import { useProductsByIds } from "../hooks/useProductsByIds";
 
 export default function Wishlist() {
   const navigate = useNavigate();
@@ -15,16 +14,7 @@ export default function Wishlist() {
   const setDrawerOpen = useCartStore((state) => state.setDrawerOpen);
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
 
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ["wishlist-products", productIds],
-    queryFn: () => fetchProductsByIds(productIds),
-    enabled: productIds.length > 0,
-  });
-
-  const orderedProducts = useMemo(() => {
-    const productMap = new Map(products.map((product) => [product.id, product]));
-    return productIds.map((id) => productMap.get(id)).filter(Boolean);
-  }, [productIds, products]);
+  const { orderedProducts, isLoading } = useProductsByIds(productIds);
 
   return (
     <Layout>

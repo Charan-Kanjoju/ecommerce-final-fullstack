@@ -1,9 +1,7 @@
-import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import Layout from "../components/Layout";
 import { useCartStore } from "../store/useCartStore";
-import { fetchProductsByIds } from "../services/product.service";
+import { useProductsByIds } from "../hooks/useProductsByIds";
 
 export default function Cart() {
   const navigate = useNavigate();
@@ -11,19 +9,7 @@ export default function Cart() {
 
   const productIds = items.map((item) => item.productId);
 
-  const { data: products } = useQuery({
-    queryKey: ["cart-page-products", productIds],
-    queryFn: () => fetchProductsByIds(productIds),
-    enabled: productIds.length > 0,
-  });
-
-  const productMap = useMemo(() => {
-    const map: Record<string, any> = {};
-    (products || []).forEach((product) => {
-      map[product.id] = product;
-    });
-    return map;
-  }, [products]);
+  const { productMap } = useProductsByIds(productIds);
 
   const total = items.reduce((sum, item) => {
     const product = productMap[item.productId];

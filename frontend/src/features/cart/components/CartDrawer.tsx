@@ -1,15 +1,9 @@
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { useCartStore } from "../../../store/useCartStore";
-import {
-  fetchProductsByIds,
-  type Product,
-} from "../../../services/product.service";
 import { useAuthStore } from "../../../store/useAuthStore";
-
-type CartProductMap = Record<string, Product>;
+import { useProductsByIds } from "../../../hooks/useProductsByIds";
 
 export const CartDrawer = () => {
   const navigate = useNavigate();
@@ -19,20 +13,13 @@ export const CartDrawer = () => {
 
   const productIds = items.map((item) => item.productId);
 
-  const { data: productsData } = useQuery({
-    queryKey: ["cart-products", productIds],
-    queryFn: () => fetchProductsByIds(productIds),
-    enabled: productIds.length > 0,
-  });
+  const { data: productsData, productMap } = useProductsByIds(productIds);
 
-  const productMap = useMemo(() => {
-    const map: CartProductMap = {};
+  useEffect(() => {
     (productsData || []).forEach((product) => {
-      map[product.id] = product;
       const image = new Image();
       image.src = product.image;
     });
-    return map;
   }, [productsData]);
 
   const total = items.reduce((sum, item) => {

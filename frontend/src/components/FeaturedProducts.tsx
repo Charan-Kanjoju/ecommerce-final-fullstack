@@ -1,18 +1,13 @@
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import ProductCard from "./ProductCard";
-import { fetchProducts } from "../services/product.service";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "./ui/carousel";
+import { useHomepageProducts } from "../hooks/useHomepageProducts";
 
 export default function FeaturedProducts() {
   const [api, setApi] = useState<CarouselApi>();
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["featured-products"],
-    queryFn: () => fetchProducts({ page: 1, sort: "newest" }),
-    staleTime: 60 * 1000,
-  });
+  const { data, isLoading } = useHomepageProducts();
 
   useEffect(() => {
     if (!api) return;

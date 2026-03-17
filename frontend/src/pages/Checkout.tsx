@@ -1,12 +1,12 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import Layout from "../components/Layout";
 import { useCartStore } from "../store/useCartStore";
 import { api } from "../api/client";
-import { fetchProductsByIds } from "../services/product.service";
 import { getApiErrorMessage } from "../lib/api-error";
+import { useProductsByIds } from "../hooks/useProductsByIds";
 
 type CheckoutForm = {
   fullName: string;
@@ -62,19 +62,7 @@ export default function Checkout() {
 
   const productIds = items.map((item) => item.productId);
 
-  const { data: products } = useQuery({
-    queryKey: ["checkout-products", productIds],
-    queryFn: () => fetchProductsByIds(productIds),
-    enabled: productIds.length > 0,
-  });
-
-  const productMap = useMemo(() => {
-    const map: Record<string, any> = {};
-    (products || []).forEach((product) => {
-      map[product.id] = product;
-    });
-    return map;
-  }, [products]);
+  const { productMap } = useProductsByIds(productIds);
 
   const shippingMethod = watch("shippingMethod");
   const subtotal = items.reduce((sum, item) => {

@@ -14,6 +14,8 @@ const refreshClient = axios.create({
 });
 
 let refreshPromise: Promise<string | null> | null = null;
+let bootstrapPromise: Promise<string | null> | null = null;
+let hasBootstrappedAuth = false;
 
 const refreshAccessToken = async () => {
   if (!refreshPromise) {
@@ -86,5 +88,14 @@ api.interceptors.response.use(
 export const bootstrapAuthSession = async () => {
   const token = useAuthStore.getState().accessToken;
   if (token) return token;
-  return refreshAccessToken();
+  if (hasBootstrappedAuth) return null;
+
+  if (!bootstrapPromise) {
+    bootstrapPromise = refreshAccessToken().finally(() => {
+      hasBootstrappedAuth = true;
+      bootstrapPromise = null;
+    });
+  }
+
+  return bootstrapPromise;
 };

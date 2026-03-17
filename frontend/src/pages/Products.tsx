@@ -1,6 +1,6 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import type { InfiniteData } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Layout from "../components/Layout";
@@ -34,21 +34,11 @@ export default function Products() {
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
 
   const debouncedSearch = useDebounce(searchTerm, 400);
-  const { data: categoriesSeed } = useQuery({
-    queryKey: ["product-categories-seed"],
-    queryFn: () => fetchProducts({ page: 1, sort: "newest" }),
-  });
-
-  const categoryOptions = useMemo(() => {
-    const fromApi = (categoriesSeed?.products || []).map((product) => product.category).filter(Boolean);
-    const merged = Array.from(new Set([...DB_CATEGORY_SLUGS, ...fromApi]));
-
-    if (selectedCategory !== ALL_CATEGORY && !merged.includes(selectedCategory)) {
-      merged.unshift(selectedCategory);
-    }
-
-    return [ALL_CATEGORY, ...merged];
-  }, [categoriesSeed?.products, selectedCategory]);
+  const categoryOptions =
+    selectedCategory !== ALL_CATEGORY &&
+    !DB_CATEGORY_SLUGS.some((category) => category === selectedCategory)
+      ? [ALL_CATEGORY, selectedCategory, ...DB_CATEGORY_SLUGS]
+      : [ALL_CATEGORY, ...DB_CATEGORY_SLUGS];
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } =
     useInfiniteQuery<ProductsResponse, Error, InfiniteData<ProductsResponse>>({
@@ -171,7 +161,7 @@ export default function Products() {
           <div className="mb-5 space-y-2">
             <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">Category</p>
             <div className="flex flex-wrap gap-2">
-              {categoryOptions.map((category) => (
+              {categoryOptions.flatMap((category) => [
                 <button
                   key={category}
                   onClick={() => updateCategory(category)}
@@ -182,8 +172,8 @@ export default function Products() {
                   }`}
                 >
                   {category === ALL_CATEGORY ? ALL_CATEGORY : formatCategoryLabel(category)}
-                </button>
-              ))}
+                </button>,
+              ])}
             </div>
           </div>
 
@@ -239,13 +229,13 @@ export default function Products() {
             <div className="rounded-2xl border border-zinc-200 bg-white p-12 text-center text-zinc-500">No products found.</div>
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-              {products.map((product) => (
+              {products.flatMap((product) => [
                 <ProductGridCard
                   key={product.id}
                   product={product}
                   onQuickPreview={(selected) => setPreviewProduct(selected)}
-                />
-              ))}
+                />,
+              ])}
             </div>
           )}
 

@@ -18,9 +18,6 @@ function App() {
   useEffect(() => {
     const run = async () => {
       await bootstrapAuthSession();
-      if (useAuthStore.getState().isAuthenticated) {
-        await fetchCart();
-      }
     };
 
     run();
