@@ -126,6 +126,15 @@ export const CartDrawer = () => {
           <button
             onClick={() => {
               setDrawerOpen(false);
+              navigate("/cart");
+            }}
+            className="w-full rounded-full border border-zinc-300 py-3 text-sm font-medium text-zinc-900 transition hover:border-zinc-400 hover:bg-zinc-50"
+          >
+            View full cart
+          </button>
+          <button
+            onClick={() => {
+              setDrawerOpen(false);
               navigate("/checkout");
             }}
             className="w-full rounded-full bg-zinc-900 py-3 text-sm font-medium text-white hover:bg-black"
